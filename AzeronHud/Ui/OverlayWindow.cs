@@ -41,6 +41,12 @@ internal sealed class OverlayWindow : Window
         RespectCloseHotkey = false;
         DisableWindowSounds = true;
         ForceMainWindow = true;
+
+        // First open only -- after that ImGui remembers whatever the user
+        // dragged it to. Roughly the Cyborg II grid at the Azeron app's own
+        // medium button size.
+        Size = new Vector2(650, 600);
+        SizeCondition = ImGuiCond.FirstUseEver;
     }
 
     public override bool DrawConditions()
@@ -62,11 +68,23 @@ internal sealed class OverlayWindow : Window
         Flags = ImGuiWindowFlags.NoTitleBar
                 | ImGuiWindowFlags.NoScrollbar
                 | ImGuiWindowFlags.NoScrollWithMouse
-                | ImGuiWindowFlags.NoFocusOnAppearing
-                | ImGuiWindowFlags.AlwaysAutoResize;
+                | ImGuiWindowFlags.NoFocusOnAppearing;
+
+        // Scale-to-window means the user drags the frame and the keypad follows.
+        // The fixed mode is the opposite: the keypad's cell size decides, and
+        // the window shrink-wraps it.
+        if (!cfg.ScaleToWindow)
+            Flags |= ImGuiWindowFlags.AlwaysAutoResize;
 
         if (cfg.Locked)
             Flags |= ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize;
+
+        // Small enough to tuck away, but not so small the grid collapses.
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(220, 160),
+            MaximumSize = new Vector2(4000, 4000),
+        };
 
         AllowClickthrough = cfg.Locked;
         BgAlpha = cfg.BackgroundAlpha * 0.5f;
@@ -91,9 +109,20 @@ internal sealed class OverlayWindow : Window
         // One scalar drives every rect this frame. Scale is applied here and
         // nowhere else -- mixing it with SetWindowFontScale is what makes hover
         // rects drift away from what's drawn.
-        var cell = cfg.CellSize * ImGuiHelpers.GlobalScale;
+        var avail = ImGui.GetContentRegionAvail();
+        var cell = cfg.ScaleToWindow
+            ? dev.CellSizeToFit(avail, cfg.GapRatio)
+            : cfg.CellSize * ImGuiHelpers.GlobalScale;
+
         var gap = cell * cfg.GapRatio;
-        var origin = ImGui.GetCursorScreenPos();
+        var grid = dev.GridSize(cell, gap);
+
+        // Fitting preserves the grid's proportions, so one axis has slack.
+        // Centre in it rather than letting the keypad sit in a corner.
+        var origin = ImGui.GetCursorScreenPos() + new Vector2(
+            MathF.Max(0f, (avail.X - grid.X) / 2f),
+            MathF.Max(0f, (avail.Y - grid.Y) / 2f));
+
         var draw = ImGui.GetWindowDrawList();
 
         foreach (var lb in dev.Buttons)
@@ -107,10 +136,13 @@ internal sealed class OverlayWindow : Window
             DrawButton(draw, b, origin + offset, size, cell);
         }
 
-        // The per-cell InvisibleButtons moved the cursor; put it back so
-        // AlwaysAutoResize measures the grid and not the last button.
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(dev.GridSize(cell, gap));
+        // Only the shrink-wrapping mode needs something to measure. Reserving
+        // the grid while scaling to the window would fight the user's resize.
+        if (!cfg.ScaleToWindow)
+        {
+            ImGui.SetCursorScreenPos(origin);
+            ImGui.Dummy(grid);
+        }
     }
 
     private void DrawButton(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
@@ -146,11 +178,14 @@ internal sealed class OverlayWindow : Window
 
         draw.PopClipRect();
 
-        // Hit-testing goes through ImGui so the hover region is, by
-        // construction, the rect we just drew.
-        ImGui.SetCursorScreenPos(pos);
-        ImGui.InvisibleButton($"##azbtn{b.AzeronId}", size);
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem))
+        // Hover-test against the exact rect we just drew -- same coordinates,
+        // so there's no second scale path for them to drift apart on.
+        //
+        // Deliberately not an InvisibleButton: an item covering every cell eats
+        // the drag that moves and resizes the window, which on a borderless HUD
+        // leaves nothing to grab.
+        if (ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows)
+            && ImGui.IsMouseHoveringRect(pos, p1))
             DrawTooltip(b);
     }
 

@@ -22,7 +22,16 @@ public sealed class Configuration : IPluginConfiguration
 
     // --- appearance -------------------------------------------------------
 
-    /// <summary>Width of one grid cell in unscaled pixels. The app's own presets are 60/72/90.</summary>
+    /// <summary>
+    /// Size the keypad to whatever the window is, instead of sizing the window
+    /// to the keypad. The grid keeps its proportions either way.
+    /// </summary>
+    public bool ScaleToWindow = true;
+
+    /// <summary>
+    /// Width of one grid cell in unscaled pixels, used when <see cref="ScaleToWindow"/>
+    /// is off. The Azeron app's own presets are 60/72/90.
+    /// </summary>
     public float CellSize = 64f;
 
     /// <summary>Gap between cells, as a fraction of cell width. The app uses 6/72.</summary>

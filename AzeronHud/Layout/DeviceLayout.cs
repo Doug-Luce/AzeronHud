@@ -55,6 +55,24 @@ internal sealed class DeviceLayout
         return (pos, size);
     }
 
+    /// <summary>
+    /// Largest cell width whose whole grid still fits inside <paramref name="box"/>,
+    /// keeping the configurator's proportions.
+    ///
+    /// Gaps scale with the cell, so this is a solve rather than a division:
+    /// width  = cell * (cols + (cols-1) * gapRatio)
+    /// height = cell * (rows * aspect + (rows-1) * gapRatio)
+    /// </summary>
+    internal float CellSizeToFit(Vector2 box, float gapRatio)
+    {
+        if (Columns <= 0 || Rows <= 0)
+            return 1f;
+
+        var byWidth = box.X / (Columns + ((Columns - 1) * gapRatio));
+        var byHeight = box.Y / ((Rows * CellAspect) + ((Rows - 1) * gapRatio));
+        return MathF.Max(1f, MathF.Min(byWidth, byHeight));
+    }
+
     /// <summary>Total pixel size of the whole grid at this cell width.</summary>
     internal Vector2 GridSize(float cellWidth, float gap)
     {

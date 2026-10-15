@@ -5,6 +5,7 @@ using AzeronHud.Azeron;
 using AzeronHud.Layout;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Keys;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 
 namespace AzeronHud.Ui;
@@ -137,11 +138,27 @@ internal sealed class ConfigWindow : Window
         if (!ImGui.BeginTabItem("Appearance"))
             return;
 
-        var size = cfg.CellSize;
-        if (ImGui.SliderFloat("Button size", ref size, 36f, 120f, "%.0f px"))
+        var scaleToWindow = cfg.ScaleToWindow;
+        if (ImGui.Checkbox("Scale the keypad to the window", ref scaleToWindow))
         {
-            cfg.CellSize = size;
+            cfg.ScaleToWindow = scaleToWindow;
             cfg.Save();
+        }
+
+        ImGui.TextDisabled(cfg.ScaleToWindow
+            ? "Drag the HUD's bottom-right corner to resize it."
+            : "The HUD sizes itself to the button size below.");
+
+        ImGui.Spacing();
+
+        using (ImRaii.Disabled(cfg.ScaleToWindow))
+        {
+            var size = cfg.CellSize;
+            if (ImGui.SliderFloat("Button size", ref size, 36f, 120f, "%.0f px"))
+            {
+                cfg.CellSize = size;
+                cfg.Save();
+            }
         }
 
         var gap = cfg.GapRatio * 100f;
