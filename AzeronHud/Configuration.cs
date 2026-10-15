@@ -37,7 +37,13 @@ public sealed class Configuration : IPluginConfiguration
     /// <summary>Gap between cells, as a fraction of cell width. The app uses 6/72.</summary>
     public float GapRatio = 6f / 72f;
 
-    public float BackgroundAlpha = 0.85f;
+    /// <summary>Overall opacity of the HUD -- panels, icons, text, everything.</summary>
+    public float Opacity = 0.85f;
+
+    /// <summary>Migrates configs written before the setting covered more than the panels.</summary>
+    [Newtonsoft.Json.JsonProperty("BackgroundAlpha")]
+    private float LegacyBackgroundAlpha { set => Opacity = value; }
+
     public float Rounding = 6f;
 
     /// <summary>Lock position and let clicks pass through to the game.</summary>

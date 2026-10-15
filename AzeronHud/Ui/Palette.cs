@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using AzeronHud.Game;
 using Dalamud.Bindings.ImGui;
@@ -38,6 +39,18 @@ internal static class Palette
     internal static readonly uint Charges = Rgba(1.00f, 0.95f, 0.70f, 1f);
     internal static readonly uint Pip = Rgba(0.70f, 0.78f, 0.90f, 0.85f);
     internal static readonly Vector4 IconTintUnusable = new(0.55f, 0.55f, 0.55f, 1f);
+
+    /// <summary>
+    /// Scale a packed colour's alpha. Raw draw-list calls take an explicit
+    /// colour, so ImGui's own style alpha doesn't reach them -- the HUD's
+    /// opacity has to be folded in by hand or icons and text stay solid while
+    /// the panels fade.
+    /// </summary>
+    internal static uint Fade(uint col, float a)
+    {
+        var alpha = (uint)Math.Clamp(((col >> 24) & 0xFF) * a, 0f, 255f);
+        return (col & 0x00FFFFFF) | (alpha << 24);
+    }
 
     private static uint Rgba(float r, float g, float b, float a) =>
         ImGui.ColorConvertFloat4ToU32(new Vector4(r, g, b, a));

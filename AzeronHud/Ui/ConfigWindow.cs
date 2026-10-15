@@ -168,10 +168,10 @@ internal sealed class ConfigWindow : Window
             cfg.Save();
         }
 
-        var alpha = cfg.BackgroundAlpha;
+        var alpha = cfg.Opacity;
         if (ImGui.SliderFloat("Opacity", ref alpha, 0.2f, 1f, "%.2f"))
         {
-            cfg.BackgroundAlpha = alpha;
+            cfg.Opacity = alpha;
             cfg.Save();
         }
 

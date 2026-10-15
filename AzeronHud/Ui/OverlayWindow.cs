@@ -87,7 +87,7 @@ internal sealed class OverlayWindow : Window
         };
 
         AllowClickthrough = cfg.Locked;
-        BgAlpha = cfg.BackgroundAlpha * 0.5f;
+        BgAlpha = cfg.Opacity * 0.5f;
     }
 
     public override void Draw()
@@ -155,26 +155,28 @@ internal sealed class OverlayWindow : Window
         // action names all overflow otherwise.
         draw.PushClipRect(pos, p1, true);
 
-        draw.AddRectFilled(pos, p1, Palette.Background(b.Tier, cfg.BackgroundAlpha), rounding);
+        draw.AddRectFilled(pos, p1, Palette.Background(b.Tier, cfg.Opacity), rounding);
 
         if (cfg.ShowIcons && b.IconId != 0)
-            DrawIcon(draw, b, pos, size);
+            DrawIcon(draw, b, pos, size, cfg.Opacity);
 
         if (cfg.ShowCooldown && b.CooldownPct > 0f)
             DrawCooldown(draw, b, pos, size, cell);
 
         if (cfg.DimUnusable && !b.Usable && b.Tier == ResolutionTier.HotbarSlot)
-            draw.AddRectFilled(pos, p1, Palette.UnusableVeil, rounding);
+            draw.AddRectFilled(pos, p1, Palette.Fade(Palette.UnusableVeil, cfg.Opacity), rounding);
 
         draw.AddRect(
             pos, p1,
-            pressed ? Palette.Pressed : Palette.Border(b.Tier, cfg.BackgroundAlpha),
+            pressed
+                ? Palette.Fade(Palette.Pressed, cfg.Opacity)
+                : Palette.Border(b.Tier, cfg.Opacity),
             rounding, ImDrawFlags.None, pressed ? 2.5f : 1.5f);
 
         DrawText(draw, b, pos, size, cell);
 
         if (cfg.ShowSecondaryPips && (b.HasLongPress || b.HasDoublePress))
-            DrawPips(draw, b, pos, size, cell);
+            DrawPips(draw, b, pos, size, cell, cfg.Opacity);
 
         draw.PopClipRect();
 
@@ -189,7 +191,7 @@ internal sealed class OverlayWindow : Window
             DrawTooltip(b);
     }
 
-    private static void DrawIcon(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size)
+    private static void DrawIcon(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float opacity)
     {
         var shared = Plugin.Textures.GetFromGameIcon(new GameIconLookup(b.IconId));
         if (!shared.TryGetWrap(out var wrap, out _))
@@ -198,9 +200,9 @@ internal sealed class OverlayWindow : Window
         // Square icon, centred in the upper part of the cell so the label has room.
         var side = MathF.Min(size.X, size.Y) * 0.56f;
         var topLeft = new Vector2(pos.X + ((size.X - side) / 2f), pos.Y + (size.Y * 0.06f));
-        var tint = b.Usable
-            ? 0xFFFFFFFFu
-            : ImGui.ColorConvertFloat4ToU32(Palette.IconTintUnusable);
+        var tint = Palette.Fade(
+            b.Usable ? 0xFFFFFFFFu : ImGui.ColorConvertFloat4ToU32(Palette.IconTintUnusable),
+            opacity);
 
         draw.AddImage(wrap.Handle, topLeft, topLeft + new Vector2(side, side),
             Vector2.Zero, Vector2.One, tint);
@@ -219,7 +221,7 @@ internal sealed class OverlayWindow : Window
         draw.AddRectFilled(
             pos,
             new Vector2(pos.X + size.X, pos.Y + (size.Y * b.CooldownPct)),
-            Palette.CooldownVeil);
+            Palette.Fade(Palette.CooldownVeil, cfg.Opacity));
 
         if (!cfg.ShowCooldownNumerals || b.CooldownSeconds <= 0)
             return;
@@ -230,7 +232,7 @@ internal sealed class OverlayWindow : Window
         var scale = cell / ImGui.GetFontSize() * 0.34f;
         var extent = ImGui.CalcTextSize(text) * scale;
         draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-            centre - (extent / 2f), Palette.Title, text);
+            centre - (extent / 2f), Palette.Fade(Palette.Title, cfg.Opacity), text);
     }
 
     private void DrawText(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
@@ -241,7 +243,7 @@ internal sealed class OverlayWindow : Window
         {
             var scale = cell / ImGui.GetFontSize() * 0.17f;
             draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-                pos + new Vector2(pad, pad), Palette.Chord, b.Chord);
+                pos + new Vector2(pad, pad), Palette.Fade(Palette.Chord, cfg.Opacity), b.Chord);
         }
 
         if (b.Charges > 1)
@@ -251,7 +253,7 @@ internal sealed class OverlayWindow : Window
             var extent = ImGui.CalcTextSize(text) * scale;
             draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
                 new Vector2(pos.X + size.X - extent.X - pad, pos.Y + pad),
-                Palette.Charges, text);
+                Palette.Fade(Palette.Charges, cfg.Opacity), text);
         }
 
         if (b.Title.Length == 0)
@@ -268,13 +270,15 @@ internal sealed class OverlayWindow : Window
 
         draw.PushClipRect(pos + new Vector2(pad * 0.5f, 0), pos + size - new Vector2(pad * 0.5f, 0), true);
         draw.AddText(ImGui.GetFont(), titleSize, titlePos,
-            b.Tier is ResolutionTier.Empty or ResolutionTier.RawKey ? Palette.TitleDim : Palette.Title,
+            Palette.Fade(
+                b.Tier is ResolutionTier.Empty or ResolutionTier.RawKey ? Palette.TitleDim : Palette.Title,
+                cfg.Opacity),
             b.Title);
         draw.PopClipRect();
     }
 
     /// <summary>One dot for a long-press bind, two for a double-press.</summary>
-    private static void DrawPips(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
+    private static void DrawPips(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell, float opacity)
     {
         var r = cell * 0.035f;
         var y = pos.Y + size.Y - (r * 2.2f);
@@ -282,14 +286,14 @@ internal sealed class OverlayWindow : Window
 
         if (b.HasLongPress)
         {
-            draw.AddCircleFilled(new Vector2(x, y), r, Palette.Pip);
+            draw.AddCircleFilled(new Vector2(x, y), r, Palette.Fade(Palette.Pip, opacity));
             x -= r * 2.6f;
         }
 
         if (b.HasDoublePress)
         {
-            draw.AddCircleFilled(new Vector2(x, y), r, Palette.Pip);
-            draw.AddCircleFilled(new Vector2(x - (r * 2.6f), y), r, Palette.Pip);
+            draw.AddCircleFilled(new Vector2(x, y), r, Palette.Fade(Palette.Pip, opacity));
+            draw.AddCircleFilled(new Vector2(x - (r * 2.6f), y), r, Palette.Fade(Palette.Pip, opacity));
         }
     }
 

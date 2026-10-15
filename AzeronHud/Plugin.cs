@@ -100,7 +100,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 discovered = Array.Empty<AzeronProfile>();
                 active = null;
-                resolver.Rebuild(null);
+                resolver.Rebuild(null, null);
                 statusText = $"Azeron Software config not found at {store.Root}";
                 return;
             }
@@ -109,7 +109,7 @@ public sealed class Plugin : IDalamudPlugin
             if (discovered.Count == 0)
             {
                 active = null;
-                resolver.Rebuild(null);
+                resolver.Rebuild(null, null);
                 statusText = $"No profiles for device {cfg.ProductId} under {store.Root}";
                 return;
             }
@@ -125,7 +125,7 @@ public sealed class Plugin : IDalamudPlugin
             }
 
             RebuildKeybinds();
-            resolver.Rebuild(active);
+            resolver.Rebuild(active, layout);
 
             var present = active.Inputs.Count(i => i.IsPresent);
             statusText =
@@ -176,7 +176,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 RebuildKeybinds();
                 if (keybindsBuilt)
-                    resolver.Rebuild(active);
+                    resolver.Rebuild(active, layout);
             }
 
             // Picks up edits made in the Azeron app while the game is running.
@@ -188,7 +188,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 lastStructurePoll = now;
                 if (resolver.StructureLooksStale())
-                    resolver.Rebuild(active);
+                    resolver.Rebuild(active, layout);
             }
 
             resolver.RefreshVolatile();

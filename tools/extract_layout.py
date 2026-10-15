@@ -86,6 +86,18 @@ def grid_templates(js):
     return [g for g in out if len(g) > 1]
 
 
+def keypad_enum(js):
+    """The KeypadType enum, scoped to its own declaration.
+
+    Several unrelated enums in the bundle reuse the same small integers, so
+    matching e[e.Name=N] across the whole file picks the wrong one.
+    """
+    decl = re.search(r"\(e=>\((?:e\[e\.\w+=\d+\]=\"\w+\",)*e\[e\.CyborgV2=\d+\][^)]*\)", js)
+    if decl is None:
+        sys.exit("could not locate the KeypadType enum")
+    return dict((int(v), k) for k, v in re.findall(r"e\[e\.(\w+)=(\d+)\]", decl.group()))
+
+
 def keypad_template(js, keypad_type):
     """The right-handed template for one keypad type.
 
@@ -102,14 +114,7 @@ def keypad_template(js, keypad_type):
             r"case \$e\.(\w+):return (\w+)\?(\w+):(\w+);", js
         )
     )
-    # Scope the enum lookup to the KeypadType declaration -- several unrelated
-    # enums in the bundle reuse the same small integers.
-    decl = re.search(r"\(e=>\((?:e\[e\.\w+=\d+\]=\"\w+\",)*e\[e\.CyborgV2=\d+\][^)]*\)", js)
-    if decl is None:
-        sys.exit("could not locate the KeypadType enum")
-    enum = dict(
-        (int(v), k) for k, v in re.findall(r"e\[e\.(\w+)=(\d+)\]", decl.group())
-    )
+    enum = keypad_enum(js)
     name = enum.get(keypad_type)
     if name not in cases:
         sys.exit(f"no right-handed template case for keypad type {keypad_type} ({name})")
@@ -121,6 +126,43 @@ def keypad_template(js, keypad_type):
     return [r for r in rows if r]
 
 
+def keypad_descriptor(js, keypad_type, enum):
+    """Which buttons the keypad actually has.
+
+    The mapper does not draw every cell in the grid -- the grid is a superset
+    shared across models, and the app filters it through a per-device
+    descriptor. Reading that is the only way to know which ids are real; the
+    profile's own pinOne field says 255 for absent slots but still lists a few
+    that the configurator hides, such as the profile-switch button.
+    """
+    name = enum.get(keypad_type)
+    cases = dict(re.findall(r"case \$e\.(\w+):return (\w+);", js))
+    # `case A: case B: return X;` -- the fallthrough label needs the next return.
+    if name not in cases:
+        sys.exit(f"no descriptor case for keypad type {keypad_type} ({name})")
+
+    ident = cases[name]
+    m = re.search(re.escape(ident) + r"=\{buttonCodes:\[([\d,]*)\][^}]*?profileSwitchCode:(\d+),"
+                  r"isAnalogInput:(.*?),isMouseWheel:(.*?)\}", js)
+    if m is None:
+        sys.exit(f"could not parse descriptor {ident}")
+
+    codes = [int(c) for c in m.group(1).split(",") if c]
+    switch_code = int(m.group(2))
+
+    # The two predicates compare against module-level consts (un=24, Qc=39...),
+    # so resolve the identifiers rather than hardcoding the numbers.
+    consts = dict((k, int(v)) for k, v in re.findall(r"\b([A-Za-z_$][\w$]*)=(\d+)\b", js))
+
+    def ids_in(expr):
+        out = []
+        for tok in re.findall(r"e===([A-Za-z_$][\w$]*|\d+)", expr):
+            out.append(int(tok) if tok.isdigit() else consts.get(tok))
+        return sorted(i for i in out if i is not None)
+
+    return codes, switch_code, ids_in(m.group(3)), ids_in(m.group(4))
+
+
 def cell_aspect(js):
     """Button cells are width x width*qp; qp is a literal ratio in the bundle."""
     m = re.search(r"\bqp=(\d+)/(\d+)\b", js)
@@ -129,8 +171,10 @@ def cell_aspect(js):
     return int(m.group(1)), int(m.group(2))
 
 
-def to_layout(rows, aspect, name, keypad_type, product_id):
+def to_layout(rows, aspect, name, keypad_type, product_id, descriptor):
     """Collapse the area grid into one placed rect per button id."""
+    codes, switch_code, analog, wheel = descriptor
+    present = set(codes)
     spans = {}
     for r, row in enumerate(rows):
         for c, cell in enumerate(row):
@@ -143,6 +187,10 @@ def to_layout(rows, aspect, name, keypad_type, product_id):
             s["col2"] = max(s["col2"], c)
             s["row2"] = max(s["row2"], r)
 
+    missing = present - set(spans)
+    if missing:
+        sys.exit(f"descriptor lists buttons with no grid cell: {sorted(missing)}")
+
     buttons = [
         {
             "id": bid,
@@ -150,8 +198,10 @@ def to_layout(rows, aspect, name, keypad_type, product_id):
             "row": s["row"],
             "colSpan": s["col2"] - s["col"] + 1,
             "rowSpan": s["row2"] - s["row"] + 1,
+            "kind": "stick" if bid in analog else "wheel" if bid in wheel else "button",
         }
         for bid, s in sorted(spans.items())
+        if bid in present          # the grid is a superset; keep only real buttons
     ]
     h, w = aspect
     return {
@@ -161,6 +211,7 @@ def to_layout(rows, aspect, name, keypad_type, product_id):
         "columns": max(len(r) for r in rows),
         "rows": len(rows),
         "cellAspect": h / w,
+        "profileSwitchCode": switch_code,
         "buttons": buttons,
     }
 
@@ -188,7 +239,8 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     for keypad_type, (slug, name, product_id) in MODELS.items():
         rows = keypad_template(js, keypad_type)
-        layout = to_layout(rows, aspect, name, keypad_type, product_id)
+        descriptor = keypad_descriptor(js, keypad_type, keypad_enum(js))
+        layout = to_layout(rows, aspect, name, keypad_type, product_id, descriptor)
         dst = os.path.join(OUT_DIR, f"{slug}.json")
         with open(dst, "w") as fh:
             json.dump(layout, fh, indent=2)

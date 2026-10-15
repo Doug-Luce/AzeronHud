@@ -36,6 +36,30 @@ model. The user's saved layout in the app's own localStorage (`azeron-ui-button-
 `deviceMappers["35298"]`) was byte-identical to the stock template, so there's no per-user override to
 worry about yet. If someone rearranges their mapper in the app, we'd need to read that key.
 
+## `pinOne != 255` is NOT the test for "this button exists"
+
+It looks like it should be, and it is wrong. The profile lists buttons the
+configurator never draws -- most visibly **id 21, the profile-switch button**,
+which has `pinOne: 0, pinTwo: 0` and shows up as a phantom "Switch" cell. On the
+Cyborg II it also over-counts ids 42 and 43.
+
+The app filters the grid through a per-device descriptor, selected by
+`Sf(keypadType)` in the renderer bundle:
+
+```js
+case $e.CyborgV2: return GI;
+GI = { buttonCodes: [1..20, 22, 23, 24, 28, 29, 30, 31, 36, 37, 38, 41],
+       profileSwitchCode: 21, isAnalogInput: e => e === 24, isMouseWheel: () => !1 }
+```
+
+31 codes -- 30 buttons plus the thumbstick -- which matches the advertised
+"22 tower + 8 thumb" exactly. `tools/extract_layout.py` bakes that list into the
+layout JSON and the resolver iterates it, so the profile's `pinOne` is now only
+used for diagnostics.
+
+Note `isMouseWheel` is non-trivial only for the Cyro descriptor (ids 39/40); the
+Cyborg II has no wheel, which is why those two ids are absent from its list.
+
 ## `types[0]` is the only trustworthy signal, not `keyValues`
 
 Unassigned slots keep stale `keyValues` from whatever was there before. The Arc Raiders profile has ids
@@ -87,6 +111,16 @@ renders from, so using them means the HUD behaves identically — and actions, i
 and gear sets all resolve through one code path.
 
 Don't reimplement `ActionManager.GetRecastTime` arithmetic.
+
+## Draw-list colours don't see ImGui's style alpha
+
+`ImGuiStyleVar.Alpha` only reaches widgets that resolve their colour through
+`GetColorU32`. Everything the overlay draws is a raw `ImDrawList` call with an
+explicit colour, so the opacity setting has to be folded into each one by hand
+(`Palette.Fade`) -- otherwise the panels fade and the icons and text stay solid.
+
+Watch for double-application: `Palette.Background`/`Border` already take the
+alpha, so they must not also be passed through `Fade`.
 
 ## Scale is applied exactly once
 

@@ -30,6 +30,16 @@ internal sealed class DeviceLayout
     /// <summary>Cell height as a multiple of cell width (the configurator uses 106/75).</summary>
     [JsonProperty("cellAspect")] public float CellAspect = 1f;
 
+    /// <summary>
+    /// Button id that switches profiles. The configurator handles it outside
+    /// the mapper and never draws it, so neither do we.
+    /// </summary>
+    [JsonProperty("profileSwitchCode")] public int ProfileSwitchCode;
+
+    /// <summary>
+    /// The buttons this model actually has. The grid is a superset shared
+    /// across Azeron models; this list is already filtered to the real ones.
+    /// </summary>
     [JsonProperty("buttons")] public List<LayoutButton> Buttons = new();
 
     private static Dictionary<int, DeviceLayout>? byProductId;
@@ -112,4 +122,7 @@ internal sealed class LayoutButton
     [JsonProperty("row")] public int Row;
     [JsonProperty("colSpan")] public int ColSpan = 1;
     [JsonProperty("rowSpan")] public int RowSpan = 1;
+
+    /// <summary>"button", "stick" or "wheel".</summary>
+    [JsonProperty("kind")] public string Kind = "button";
 }

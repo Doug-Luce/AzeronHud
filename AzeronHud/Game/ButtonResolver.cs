@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AzeronHud.Azeron;
+using AzeronHud.Layout;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
 namespace AzeronHud.Game;
@@ -28,20 +29,26 @@ internal sealed unsafe class ButtonResolver
     /// Full rebuild: decode every Azeron bind, match it against the keybind
     /// table and look up the hotbar slot behind it.
     /// </summary>
-    internal void Rebuild(AzeronProfile? profile)
+    internal void Rebuild(AzeronProfile? profile, DeviceLayout? layout)
     {
         buttons.Clear();
         hotbarByButton.Clear();
 
-        if (profile == null)
+        if (profile == null || layout == null)
             return;
 
+        // The layout's button list is the authority on what the keypad has.
+        // The profile's own pinOne field is not: it marks absent slots 255 but
+        // still lists buttons the configurator hides, like the profile-switch
+        // key, which would otherwise show up as phantom cells.
+        var byId = new Dictionary<int, AzeronInput>();
         foreach (var input in profile.Inputs)
-        {
-            if (!input.IsPresent)
-                continue;
+            byId[input.Id] = input;
 
-            buttons[input.Id] = Resolve(input);
+        foreach (var lb in layout.Buttons)
+        {
+            if (byId.TryGetValue(lb.Id, out var input))
+                buttons[lb.Id] = Resolve(input);
         }
 
         RefreshVolatile();

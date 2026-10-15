@@ -5,363 +5,255 @@
   "columns": 9,
   "rows": 6,
   "cellAspect": 1.4133333333333333,
+  "profileSwitchCode": 21,
   "buttons": [
     {
       "id": 1,
       "col": 1,
       "row": 4,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 2,
       "col": 1,
       "row": 3,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 3,
       "col": 1,
       "row": 2,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 4,
       "col": 1,
       "row": 1,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 5,
       "col": 2,
       "row": 4,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 6,
       "col": 2,
       "row": 3,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 7,
       "col": 2,
       "row": 2,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 8,
       "col": 2,
       "row": 1,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 9,
       "col": 3,
       "row": 4,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 10,
       "col": 3,
       "row": 3,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 11,
       "col": 3,
       "row": 2,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 12,
       "col": 3,
       "row": 1,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 13,
       "col": 3,
       "row": 5,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 14,
       "col": 4,
       "row": 4,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 15,
       "col": 4,
       "row": 3,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 16,
       "col": 4,
       "row": 2,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 17,
       "col": 4,
       "row": 1,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 18,
       "col": 4,
       "row": 5,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 19,
       "col": 5,
       "row": 3,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 20,
       "col": 8,
       "row": 4,
       "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 21,
-      "col": 0,
-      "row": 0,
-      "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 22,
       "col": 7,
       "row": 1,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 23,
       "col": 6,
       "row": 5,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 24,
       "col": 6,
       "row": 3,
       "colSpan": 2,
-      "rowSpan": 2
-    },
-    {
-      "id": 25,
-      "col": 0,
-      "row": 1,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 26,
-      "col": 0,
-      "row": 2,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 27,
-      "col": 0,
-      "row": 4,
-      "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 2,
+      "kind": "stick"
     },
     {
       "id": 28,
       "col": 7,
       "row": 0,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 29,
       "col": 6,
       "row": 1,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 30,
       "col": 7,
       "row": 2,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 31,
       "col": 8,
       "row": 1,
       "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 32,
-      "col": 0,
-      "row": 5,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 33,
-      "col": 1,
-      "row": 0,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 34,
-      "col": 2,
-      "row": 0,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 35,
-      "col": 3,
-      "row": 0,
-      "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 36,
       "col": 0,
       "row": 3,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 37,
       "col": 1,
       "row": 5,
       "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 38,
       "col": 2,
       "row": 5,
       "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 39,
-      "col": 4,
-      "row": 0,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 40,
-      "col": 5,
-      "row": 0,
-      "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     },
     {
       "id": 41,
       "col": 8,
       "row": 3,
       "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 42,
-      "col": 6,
-      "row": 0,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 43,
-      "col": 8,
-      "row": 0,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 44,
-      "col": 5,
-      "row": 1,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 45,
-      "col": 8,
-      "row": 2,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 46,
-      "col": 6,
-      "row": 2,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 47,
-      "col": 8,
-      "row": 5,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 48,
-      "col": 7,
-      "row": 5,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 49,
-      "col": 5,
-      "row": 4,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 50,
-      "col": 5,
-      "row": 5,
-      "colSpan": 1,
-      "rowSpan": 1
-    },
-    {
-      "id": 51,
-      "col": 5,
-      "row": 2,
-      "colSpan": 1,
-      "rowSpan": 1
+      "rowSpan": 1,
+      "kind": "button"
     }
   ]
 }
