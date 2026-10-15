@@ -1,0 +1,19 @@
+[
+  {
+    "Author": "aurelius",
+    "Name": "Azeron HUD",
+    "InternalName": "AzeronHud",
+    "AssemblyVersion": "1.0.0.0",
+    "Description": "Draws your Azeron keypad in the same layout as the Azeron configurator, overlaid on the game. Each button is labelled with what it does right now: the hotbar action's icon and name when the key is bound to a hotbar slot, the FFXIV keybind's name when it isn't, and the raw key or your own Azeron label otherwise. Actions on cooldown or unusable are dimmed, like a miniature hotbar.\n\nReads your Azeron profile straight from the Azeron Software config directory, so labels follow whatever you've set up there. Hidden by default; toggle with /azeronhud.\n\nSupports the Azeron Cyborg II.",
+    "Punchline": "Your Azeron keypad, drawn on screen with what each button actually does.",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "Tags": ["hud", "overlay", "keybind", "azeron", "keypad", "hotbar"],
+    "CategoryTags": ["ui"],
+    "RepoUrl": "https://github.com/Doug-Luce/azeron-hud",
+    "AcceptsFeedback": false,
+    "DownloadLinkInstall": "https://github.com/Doug-Luce/azeron-hud/releases/latest/download/latest.zip",
+    "DownloadLinkTesting": "https://github.com/Doug-Luce/azeron-hud/releases/latest/download/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/Doug-Luce/azeron-hud/releases/latest/download/latest.zip"
+  }
+]
