@@ -107,7 +107,9 @@ internal sealed class OverlayWindow : Window
             DrawButton(draw, b, origin + offset, size, cell);
         }
 
-        // AlwaysAutoResize needs something to measure.
+        // The per-cell InvisibleButtons moved the cursor; put it back so
+        // AlwaysAutoResize measures the grid and not the last button.
+        ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(dev.GridSize(cell, gap));
     }
 
@@ -116,6 +118,10 @@ internal sealed class OverlayWindow : Window
         var p1 = pos + size;
         var rounding = cfg.Rounding * ImGuiHelpers.GlobalScale;
         var pressed = cfg.HighlightPressed && IsHeld(b);
+
+        // Everything inside a cell stays inside it -- icons, cooldown and long
+        // action names all overflow otherwise.
+        draw.PushClipRect(pos, p1, true);
 
         draw.AddRectFilled(pos, p1, Palette.Background(b.Tier, cfg.BackgroundAlpha), rounding);
 
@@ -137,6 +143,8 @@ internal sealed class OverlayWindow : Window
 
         if (cfg.ShowSecondaryPips && (b.HasLongPress || b.HasDoublePress))
             DrawPips(draw, b, pos, size, cell);
+
+        draw.PopClipRect();
 
         // Hit-testing goes through ImGui so the hover region is, by
         // construction, the rect we just drew.
@@ -163,26 +171,25 @@ internal sealed class OverlayWindow : Window
             Vector2.Zero, Vector2.One, tint);
     }
 
-    /// <summary>Dark sweep from 12 o'clock, the way a hotbar reads at a glance.</summary>
+    /// <summary>
+    /// Dark veil that drains off the top as the recast elapses.
+    ///
+    /// Not the hotbar's radial sweep: a pie past 180 degrees isn't convex, and
+    /// the only fills in this ImGui binding are the convex ones, so a wedge
+    /// would render as garbage. At keypad-cell size a vertical drain reads
+    /// better than a tiny pie anyway.
+    /// </summary>
     private void DrawCooldown(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
     {
-        const int Segments = 28;
-
-        var centre = pos + (size / 2f);
-        var radius = size.Length();          // overshoot so the wedge covers the corners
-        var sweep = b.CooldownPct * MathF.PI * 2f;
-
-        draw.PathLineTo(centre);
-        for (var i = 0; i <= Segments; i++)
-        {
-            var a = (-MathF.PI / 2f) + (sweep * i / Segments);
-            draw.PathLineTo(centre + new Vector2(MathF.Cos(a), MathF.Sin(a)) * radius);
-        }
-
-        draw.PathFillConvex(Palette.CooldownVeil);
+        draw.AddRectFilled(
+            pos,
+            new Vector2(pos.X + size.X, pos.Y + (size.Y * b.CooldownPct)),
+            Palette.CooldownVeil);
 
         if (!cfg.ShowCooldownNumerals || b.CooldownSeconds <= 0)
             return;
+
+        var centre = pos + (size / 2f);
 
         var text = b.CooldownSeconds.ToString();
         var scale = cell / ImGui.GetFontSize() * 0.34f;
