@@ -42,6 +42,13 @@ internal sealed class OverlayWindow : Window
         DisableWindowSounds = true;
         ForceMainWindow = true;
 
+        // Both of these add Dalamud's own titlebar button for pin/clickthrough.
+        // On a borderless HUD that is an interactive widget floating over the
+        // keypad with nothing to anchor it, and it takes focus when clicked.
+        // The plugin exposes locking itself, so turn the built-in off.
+        AllowPinning = false;
+        AllowClickthrough = false;
+
         // First open only -- after that ImGui remembers whatever the user
         // dragged it to. Roughly the Cyborg II grid at the Azeron app's own
         // medium button size.
@@ -77,7 +84,20 @@ internal sealed class OverlayWindow : Window
             Flags |= ImGuiWindowFlags.AlwaysAutoResize;
 
         if (cfg.Locked)
-            Flags |= ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize;
+        {
+            // Locked means inert, not merely immovable. Without NoMouseInputs
+            // the window still swallows every click and drag that lands on it,
+            // which over a HUD this size means the game stops responding
+            // wherever it happens to sit.
+            Flags |= ImGuiWindowFlags.NoMove
+                     | ImGuiWindowFlags.NoResize
+                     | ImGuiWindowFlags.NoMouseInputs
+                     | ImGuiWindowFlags.NoNav;
+        }
+
+        // Even unlocked it has no business pulling itself in front of other
+        // windows or taking keyboard navigation away from the game.
+        Flags |= ImGuiWindowFlags.NoNavFocus | ImGuiWindowFlags.NoBringToFrontOnFocus;
 
         // Small enough to tuck away, but not so small the grid collapses.
         SizeConstraints = new WindowSizeConstraints
@@ -86,7 +106,7 @@ internal sealed class OverlayWindow : Window
             MaximumSize = new Vector2(4000, 4000),
         };
 
-        AllowClickthrough = cfg.Locked;
+        IsClickthrough = cfg.Locked;
         BgAlpha = cfg.Opacity * 0.5f;
     }
 
@@ -186,7 +206,8 @@ internal sealed class OverlayWindow : Window
         // Deliberately not an InvisibleButton: an item covering every cell eats
         // the drag that moves and resizes the window, which on a borderless HUD
         // leaves nothing to grab.
-        if (ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows)
+        if (!cfg.Locked
+            && ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows)
             && ImGui.IsMouseHoveringRect(pos, p1))
             DrawTooltip(b);
     }

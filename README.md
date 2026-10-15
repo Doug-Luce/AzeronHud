@@ -17,6 +17,9 @@ and say so, rather than silently going blank.
 
 Hidden by default. Toggle it with `/azeronhud` (or `/azhud`), or bind a key in the settings.
 
+Position and size it while unlocked, then **lock it** (`/azeronhud lock`) so it stops taking the mouse.
+A locked HUD is completely inert — clicks and drags over it go straight to the game.
+
 ## Supported hardware
 
 Azeron **Cyborg II** (USB `16d0:12f7`). Other models are a data drop away — the layouts are generated from
@@ -40,7 +43,7 @@ Edits you make in the Azeron app show up within a couple of seconds, with no rel
 | `/azeronhud` | Show or hide the HUD |
 | `/azeronhud config` | Open settings |
 | `/azeronhud reload` | Re-read the profile and keybind table |
-| `/azeronhud lock` | Lock position and let clicks pass through |
+| `/azeronhud lock` | Make the HUD inert: no mouse input, no moving, no tooltips |
 | `/azeronhud dump` | Print the full resolution chain to the Dalamud log |
 
 `dump` is the thing to reach for when a button says something you don't expect: it prints every button's

@@ -184,13 +184,18 @@ internal sealed class ConfigWindow : Window
 
         ImGui.Spacing();
         var locked = cfg.Locked;
-        if (ImGui.Checkbox("Lock position (clicks pass through)", ref locked))
+        if (ImGui.Checkbox("Lock (ignore the mouse entirely)", ref locked))
         {
             cfg.Locked = locked;
             cfg.Save();
         }
 
-        ImGui.TextDisabled("While locked you can't drag the HUD, and hovering won't show tooltips.");
+        ImGui.TextWrapped(cfg.Locked
+            ? "Locked: the HUD is inert. Clicks and drags over it go straight to the game, "
+              + "and there are no tooltips. Unlock to move or resize it."
+            : "Unlocked: you can drag and resize the HUD, and hovering a button shows what it "
+              + "does. While unlocked the mouse is captured over the HUD, so lock it once "
+              + "you're happy with the position. /azeronhud lock toggles this.");
 
         ImGui.EndTabItem();
     }

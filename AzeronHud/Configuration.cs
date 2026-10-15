@@ -46,7 +46,11 @@ public sealed class Configuration : IPluginConfiguration
 
     public float Rounding = 6f;
 
-    /// <summary>Lock position and let clicks pass through to the game.</summary>
+    /// <summary>
+    /// Make the HUD completely inert: no mouse input, no moving, no resizing,
+    /// no tooltips, and nothing taken away from the game. This is what you
+    /// want once it's positioned.
+    /// </summary>
     public bool Locked;
 
     // --- what each button shows -------------------------------------------

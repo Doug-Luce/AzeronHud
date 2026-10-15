@@ -122,6 +122,24 @@ explicit colour, so the opacity setting has to be folded into each one by hand
 Watch for double-application: `Palette.Background`/`Border` already take the
 alpha, so they must not also be passed through `Fade`.
 
+## AllowClickthrough does not make a window click-through
+
+It is an *offer*, not a state:
+
+> Gets or sets a value indicating whether this window should offer to be made
+> click-through via the window's titlebar context menu.
+
+The state is `IsClickthrough`, which is settable directly. `AllowPinning` is the
+same shape. Both default on, and either one makes Dalamud draw an internal
+titlebar button -- which on a `NoTitleBar` HUD is an interactive widget floating
+over the content that takes focus when clicked. Both are turned off here and the
+plugin manages `IsClickthrough` itself.
+
+Locking a HUD has to mean **inert**, not merely immovable: without
+`NoMouseInputs` the window still swallows every click and drag that lands on it,
+so the game stops responding wherever the HUD happens to sit. `NoNavFocus` and
+`NoBringToFrontOnFocus` are set unconditionally for the same reason.
+
 ## Scale is applied exactly once
 
 `GlobalUiScale` is 1.5 on this machine at 4K. The JobBars fork learned the hard way that hover rects drift
