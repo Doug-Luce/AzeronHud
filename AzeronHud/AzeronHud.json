@@ -5,8 +5,8 @@
   "AssemblyVersion": "1.0.0.0",
   "DalamudApiLevel": 15,
   "ApplicableVersion": "any",
-  "Punchline": "Your Azeron keypad, drawn on screen with what each button actually does.",
-  "Description": "Draws your Azeron keypad in the same layout as the Azeron configurator, overlaid on the game. Each button is labelled with what it does right now: the hotbar action's icon and name when the key is bound to a hotbar slot, the FFXIV keybind's name when it isn't, and the raw key or your own Azeron label otherwise. Actions on cooldown or unusable are dimmed, like a miniature hotbar.\n\nReads your Azeron profile straight from the Azeron Software config directory, so labels follow whatever you've set up there. Hidden by default; toggle with /azeronhud.\n\nSupports the Azeron Cyborg II.",
+  "Punchline": "Your Azeron keypad on screen, labelled with what each button actually does.",
+  "Description": "Draws your Azeron keypad over the game in the same layout as the Azeron configurator, with every button labelled by what it does in FFXIV.\n\nButtons bound to a hotbar slot show the real action icon and name, with its cooldown, charges, MP cost, a highlight when a proc is up, and dimming when it can't be used or the target is out of range. Buttons bound to anything else show the keybind's name, so movement, targeting and UI keys are labelled too. The thumbstick is drawn as a stick and its knob follows your thumb.\n\nIt reads the profile straight out of Azeron Software, so your binds and your own button labels come across automatically, and edits show up within a couple of seconds. The keypad does not need to be plugged in.\n\nHidden by default; toggle it with /azeronhud. Size, colours, and what each button shows are all adjustable, and there is a compact mode that shows only your abilities.\n\nSupports the Azeron Cyborg II.",
   "Tags": [
     "hud",
     "overlay",
@@ -18,5 +18,7 @@
   "CategoryTags": [
     "ui"
   ],
-  "RepoUrl": "https://github.com/Doug-Luce/azeron-hud"
+  "RepoUrl": "https://github.com/Doug-Luce/AzeronHud",
+  "IconUrl": "https://raw.githubusercontent.com/Doug-Luce/AzeronHud/main/images/icon.png",
+  "AcceptsFeedback": false
 }

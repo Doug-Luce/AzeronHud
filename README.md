@@ -1,134 +1,65 @@
 # Azeron HUD
 
-A [Dalamud](https://github.com/goatcorp/Dalamud) plugin that draws your Azeron keypad over FFXIV, in the
-same layout as the Azeron configurator, with every button labelled by what it actually does in game.
+A [Dalamud](https://github.com/goatcorp/Dalamud) plugin that draws your Azeron keypad on screen, in the
+same layout as the Azeron configurator, with every button labelled by what it does in FFXIV.
 
-Each button shows, in order of preference:
+## What it shows
 
-1. the **hotbar action's icon and name**, when the key is bound to a hotbar slot — with the real cooldown,
-   charge count and MP cost, a highlight when a proc is up, dimming when the action isn't usable, and a
-   separate tint when the target is out of range;
-2. the **FFXIV keybind's name** ("Turn On/Off Auto-run", "Move Forward"), when it's bound to something
-   that isn't a hotbar slot;
-3. your own **Azeron label**, if you set one in the Azeron app;
-4. the **raw key** otherwise.
+Buttons bound to a hotbar slot get the real thing: the action's icon and name, its cooldown and remaining
+seconds, charges, MP cost, a highlight when a proc comes up, and dimming when you can't use it or the
+target is out of range. A bar along the top edge marks the actions that run on the global cooldown, so
+your weaponskills and your abilities are easy to tell apart at a glance.
 
-The **thumbstick** is drawn the way the Azeron configurator draws it — a disc with a knob on it — and the
-knob moves: from the real gamepad axis when the stick is on XInput, or from whichever direction keys are
-held when it emulates keys. In key-emulating mode each live direction is placed around the disc and
-resolves like any other button, with the diagonals appearing only when eight-directional mode is on. On
-XInput the game sees a gamepad axis rather than a keystroke, so the HUD names the stick instead of
-guessing at a binding.
+Buttons bound to anything else are labelled too — movement, targeting, the map, whatever you've put
+there. Buttons the game can't see at all, like a mouse click or a macro, say so rather than sitting
+blank. Unassigned buttons fade into the background.
 
-Buttons whose action runs on the **global cooldown** get a bar along the top edge, so the pad reads as
-rhythm rather than as a list — GCDs in one place, abilities in another. Abilities are unmarked by
-default; give them a color under Colors to mark both.
+The thumbstick is drawn as a stick, and the knob follows your thumb.
 
-Buttons the game can't see — mouse clicks, XInput, macros, the scroll wheel — say what they are rather
-than silently going blank.
+## Setting it up
 
-Hidden by default. Toggle it with `/azeronhud` (or `/azhud`), or bind a key in the settings — and it
-reopens on load if it was open when you last quit.
+Install it, then type `/azeronhud`. That's usually all there is to it — the plugin finds Azeron Software's
+settings on its own and reads whichever profile the app has linked to FFXIV.
 
-Position and size it, then turn on **click-through** in Appearance so it stops taking the mouse. A
-click-through HUD is completely inert — clicks and drags over it go straight to the game — which also
-means you turn it off again to move or resize it.
+**Your keypad doesn't need to be plugged in.** The plugin reads your saved profile, not the device.
 
-The keypad keeps its proportions, so a window of a different shape leaves an empty band. **Fit window to
-keypad** in Appearance snaps it, and it does that automatically when hiding buttons reshapes the grid.
+Changes you make in the Azeron app show up within a couple of seconds, so you can tweak a bind and watch
+the HUD follow.
 
-## Supported hardware
+Drag the HUD where you want it and resize it by its corner, then turn on **click-through** in the
+settings so it stops taking your mouse. A click-through HUD is completely inert: clicks and drags over it
+go straight to the game.
 
-Azeron **Cyborg II** (USB `16d0:12f7`). Other models are a data drop away — the layouts are generated from
-the Azeron app itself by `tools/extract_layout.py`, which already knows how to read them; only the Cyborg II
-is enabled because it's the only one that's been tested on real hardware.
+## Making it yours
 
-## How it finds your keypad
+Everything is adjustable, in `/azeronhud config`:
 
-It reads Azeron Software's own config directory. **The keypad doesn't need to be plugged in** — the plugin
-reads the saved profile, not the device.
+- **Size and position** — the keypad scales to whatever you drag the window to, or you can set an exact
+  button size. There's a button to snap the window tight around the keypad.
+- **What each button shows** — icons, action names, the key it sends, cooldown numbers, cost, charges,
+  button numbers, and so on. Turn the names off for an icon-only HUD.
+- **Compact mode** — show only the buttons bound to an actual ability, and the HUD shrinks to just those.
+- **Colours** — all of them, including a dark outline behind text so it stays readable over a bright wall
+  or a dark cave.
+- **When it's visible** — a toggle key, hiding during cutscenes, and fading out while you're not in
+  combat.
 
-On Linux under Wine, the prefix maps `Z:` to the filesystem root, so the default path is
-`Z:\home\<you>\.config\Azeron Software`. Override it in the settings if yours lives elsewhere. Which
-keypad to show is worked out from what's on disk; the picker is only needed if you own two.
-
-Edits you make in the Azeron app show up within a couple of seconds, with no reload.
-
-## Making it readable
-
-Labels are drawn over a dark outline by default, because the HUD sits on anything from a white Limsa wall
-to a dark cave and flat text with no panel behind it is unreadable over half of that. Action names wrap to
-up to three lines, so "Presence of Mind" fits instead of being clipped.
-
-Action names, the key text and the icons each have their own toggle and size control, so an icon-only
-HUD is just a matter of turning the names off.
-
-**Only buttons bound to a hotbar action** trims the HUD to your abilities. Empty rows and columns at the
-edges close up, but gaps between buttons stay — the point of the layout is matching your hand, and
-closing those would break it.
-
-**Dim when out of combat** fades the whole thing down until you're fighting, and a button flashes briefly
-when a cooldown longer than a GCD comes back up. Routine GCD recasts don't flash, or it would strobe.
-
-## Colors
-
-Every color is editable under Settings → Colors, with a reset. Buttons are deliberately not tinted by how
-much the plugin could work out — a button is a button, and anything it couldn't resolve says so in its
-label and tooltip instead. The only panel distinction is assigned versus unassigned. Alpha is part of each
-color and the opacity slider multiplies on top.
+If you want the keypad to toggle its own HUD, bind a spare button to one of F13–F24 in the Azeron app and
+set that as the toggle key. FFXIV ignores those keys entirely, so nothing else fires.
 
 ## Commands
 
-| Command | What it does |
+| Command | |
 |---|---|
 | `/azeronhud` | Show or hide the HUD |
-| `/azeronhud config` | Open settings |
-| `/azeronhud reload` | Re-read the profile and keybind table |
-| `/azeronhud dump` | Print the full resolution chain to the Dalamud log |
+| `/azeronhud config` | Open the settings |
+| `/azeronhud reload` | Re-read your profile and keybinds |
 
-`dump` is the thing to reach for when a button says something you don't expect: it prints every button's
-decoded key, the FFXIV keybind it matched, and what that resolved to, as text.
+## Supported keypads
 
-## A trick for the toggle key
+Azeron **Cyborg II**. Other Azeron models use the same profile format and would mostly be a matter of
+adding their layout — open an issue if you have one and want it supported.
 
-Dalamud has no global hotkey, so the plugin polls the game's own key state — meaning the toggle only fires
-while the game window has focus and you aren't typing. That's the right behaviour for a HUD.
+## Licence
 
-If you want the keypad to toggle its own HUD: bind a spare Azeron button to one of `F13`–`F24` in the
-Azeron app, then set that as the hotkey here. FFXIV ignores those keys entirely, so nothing else fires.
-
-## Building
-
-```sh
-export DALAMUD_HOME=~/.xlcore/dalamud/Hooks/dev
-./deploy.sh -p:EnableWindowsTargeting=true
-```
-
-`EnableWindowsTargeting` is needed when building on Linux without the Windows Desktop runtime installed.
-`deploy.sh` drops the result into `~/.xlcore/devPlugins/AzeronHud`; reload it in game from
-`/xlplugins` → Dev Tools, with no restart.
-
-## Checks
-
-The half of the plugin that doesn't need the game — profile parsing, key decoding, layout geometry,
-profile selection — has checks that run against your real Azeron files:
-
-```sh
-dotnet run --project tests/OfflineChecks
-```
-
-No Dalamud, no Windows targeting, no game. Set `AZERON_ROOT` if your config lives somewhere unusual.
-These have caught four real bugs, so run them after touching anything under `Azeron/` or `Layout/`.
-
-## Regenerating the device layout
-
-The Azeron profile JSON contains no geometry — `x`/`y` are zero on every input. The real layout is a CSS
-`grid-template-areas` string inside the configurator's Electron bundle. To re-extract it (after an Azeron
-Software update, say):
-
-```sh
-python3 tools/extract_layout.py ~/AppImages/azeron-software.appimage
-```
-
-It unpacks to a temp directory, writes `AzeronHud/Layout/*.json`, and cleans up after itself. The plugin
-embeds those files, so it never touches the AppImage at runtime.
+MIT.

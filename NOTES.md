@@ -33,7 +33,7 @@ bounding box of each area name gets the thumbstick's 2x2 span for free, with no 
 The grid references `b1`..`b51`, but only ~34 of those exist on a real Cyborg II. **`pinOne != 255` is the
 test for "this button is physically present"** — 255 means the slot exists in the schema but not on this
 model. The user's saved layout in the app's own localStorage (`azeron-ui-button-mapper`,
-`deviceMappers["35298"]`) was byte-identical to the stock template, so there's no per-user override to
+`deviceMappers["<deviceId>"]`) was byte-identical to the stock template, so there's no per-user override to
 worry about yet. If someone rearranges their mapper in the app, we'd need to read that key.
 
 ## `pinOne != 255` is NOT the test for "this button exists"
@@ -323,7 +323,7 @@ you last edited that game's profile, and the HUD is then confidently, silently w
 The app records the answer itself:
 
 ```json
-{"profileId":"75ca7f5e-…","linkedGame":"ffxiv_dx11","linkedType":"process","isFocusSwitching":true}
+{"profileId":"<profile uuid>","linkedGame":"ffxiv_dx11","linkedType":"process","isFocusSwitching":true}
 ```
 
 The chain is: pinned in settings, then the profile linked to FFXIV, then `lastUsedSoftwareProfile`, then

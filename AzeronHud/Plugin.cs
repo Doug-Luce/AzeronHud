@@ -86,7 +86,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Commands.AddHandler(Command, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the Azeron keypad HUD. Also: config, reload, dump.",
+            HelpMessage = "Toggle the Azeron keypad HUD. Also: config, reload.",
         });
         Commands.AddHandler(ShortCommand, new CommandInfo(OnCommand)
         {
@@ -381,48 +381,10 @@ public sealed class Plugin : IDalamudPlugin
                 Reload();
                 Chat.Print($"[Azeron HUD] {statusText}");
                 break;
-            case "dump":
-                Dump();
-                break;
             default:
-                Chat.Print("[Azeron HUD] Usage: /azeronhud [config|reload|dump]");
+                Chat.Print("[Azeron HUD] Usage: /azeronhud [config|reload]");
                 break;
         }
-    }
-
-    /// <summary>
-    /// Print the whole resolution chain to the log. Every claim the HUD makes
-    /// should be checkable as text before anyone squints at pixels.
-    /// </summary>
-    private void Dump()
-    {
-        if (active == null)
-        {
-            Chat.Print($"[Azeron HUD] {statusText}");
-            return;
-        }
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"=== Azeron HUD dump: \"{active.Name}\" ({active.SourcePath}) ===");
-        sb.AppendLine($"device {cfg.ProductId}, layout {layout?.Name ?? "<none>"}, "
-                      + $"{keybinds.BoundCount} keybinds, {keybinds.NamedCount} named");
-        sb.AppendLine("id   type            key          FFXIV keybind        resolved");
-
-        foreach (var input in active.Inputs.Where(i => i.IsPresent).OrderBy(i => i.Id))
-        {
-            resolver.Buttons.TryGetValue(input.Id, out var b);
-            sb.AppendLine(string.Format(
-                "{0,-4} {1,-15} {2,-12} {3,-20} {4} [{5}]",
-                input.Id,
-                input.TypeAt(PressKind.Single),
-                b?.Chord ?? string.Empty,
-                b?.InputIdName ?? string.Empty,
-                b?.Title ?? string.Empty,
-                b?.Tier.ToString() ?? "?"));
-        }
-
-        Log.Information(sb.ToString());
-        Chat.Print($"[Azeron HUD] Dumped {resolver.Buttons.Count} buttons to the Dalamud log.");
     }
 
     private void ToggleOverlay() => overlay.IsOpen = !overlay.IsOpen;
