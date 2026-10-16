@@ -18,6 +18,11 @@ namespace AzeronHud.Game;
 /// </summary>
 internal sealed unsafe class ButtonResolver
 {
+    /// <summary>Longer than a GCD, so routine recasts don't make the HUD strobe.</summary>
+    private const int MinimumFlashCooldownSeconds = 3;
+
+    private static readonly TimeSpan ReadyFlashDuration = TimeSpan.FromMilliseconds(650);
+
     private readonly KeybindIndex keybinds;
     private readonly Dictionary<int, ResolvedButton> buttons = new();
 
@@ -326,7 +331,11 @@ internal sealed unsafe class ButtonResolver
 
             var seconds = 0;
             var pct = slot->GetSlotActionCooldownPercentage(&seconds);
-            cell.CooldownPct = Math.Clamp(pct / 100f, 0f, 1f);
+            var cooldown = Math.Clamp(pct / 100f, 0f, 1f);
+
+            NoteCooldownFinished(cell, cooldown, seconds);
+
+            cell.CooldownPct = cooldown;
             cell.CooldownSeconds = seconds;
             cell.Charges = slot->GetApparentIconRecastCharges();
 
@@ -339,6 +348,28 @@ internal sealed unsafe class ButtonResolver
                 cell.CostText = ReadCostText(slot->CostText);
             }
         }
+    }
+
+    /// <summary>
+    /// Start a flash when a cooldown ends, but only for a real cooldown.
+    ///
+    /// Every GCD finishes every couple of seconds, so flashing on all of them
+    /// would just make the HUD strobe. Track the longest remaining time seen
+    /// during this cooldown and only flash if it was longer than a GCD -- which
+    /// is what you actually want to notice coming back.
+    /// </summary>
+    private static void NoteCooldownFinished(ResolvedButton cell, float cooldown, int seconds)
+    {
+        if (cooldown > 0f)
+        {
+            cell.PeakCooldownSeconds = Math.Max(cell.PeakCooldownSeconds, seconds);
+            return;
+        }
+
+        if (cell.PeakCooldownSeconds >= MinimumFlashCooldownSeconds)
+            cell.ReadyFlashUntil = DateTime.UtcNow + ReadyFlashDuration;
+
+        cell.PeakCooldownSeconds = 0;
     }
 
     /// <summary>Null-terminated UTF-8 out of the slot's fixed buffer.</summary>

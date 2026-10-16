@@ -32,6 +32,9 @@ public sealed class ColorSet
     public Vector4 TextCost = new(0.68f, 0.82f, 1.00f, 1.00f);
     public Vector4 TextCharges = new(1.00f, 0.95f, 0.70f, 1.00f);
 
+    /// <summary>Drawn behind every label so text stays readable on any background.</summary>
+    public Vector4 TextOutline = new(0.00f, 0.00f, 0.00f, 0.85f);
+
     // --- states -------------------------------------------------------------
 
     public Vector4 Cooldown = new(0.00f, 0.00f, 0.00f, 0.62f);
@@ -40,6 +43,12 @@ public sealed class ColorSet
     public Vector4 Proc = new(1.00f, 0.90f, 0.45f, 1.00f);
     public Vector4 ProcGlow = new(1.00f, 0.82f, 0.30f, 0.30f);
     public Vector4 KeyHeld = new(1.00f, 0.84f, 0.38f, 1.00f);
+
+    /// <summary>
+    /// Brief pulse when a long cooldown finishes. Deliberately not the proc
+    /// amber -- "it came back" and "it procced" are different events.
+    /// </summary>
+    public Vector4 ReadyFlash = new(0.55f, 0.95f, 1.00f, 1.00f);
 
 
     /// <summary>Icon multiply color when the action can't be used.</summary>

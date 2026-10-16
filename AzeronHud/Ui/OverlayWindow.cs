@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using AzeronHud.Azeron;
 using AzeronHud.Game;
@@ -24,6 +26,16 @@ internal sealed class OverlayWindow : Window
     private readonly Func<DeviceLayout?> layout;
     private readonly Func<ButtonResolver> resolver;
     private readonly Func<string?> statusLine;
+
+    /// <summary>
+    /// This frame's effective opacity: the configured value, knocked down while
+    /// out of combat if the user asked for that. Computed once in PreDraw so
+    /// the window background and the contents can't disagree.
+    /// </summary>
+    private float opacity = 1f;
+
+    /// <summary>Scratch for the wrapped action name. Reused; drawing is single-threaded.</summary>
+    private readonly List<string> titleLines = new();
 
     internal OverlayWindow(
         Configuration cfg,
@@ -71,6 +83,24 @@ internal sealed class OverlayWindow : Window
         return true;
     }
 
+    /// <summary>
+    /// Whether a button earns a place on the HUD. "Only hotbar actions" keeps
+    /// a thumbstick if any of its directions casts something, since the stick
+    /// as a whole is then still worth showing.
+    /// </summary>
+    private bool IsVisible(ResolvedButton b)
+    {
+        if (cfg.OnlyHotbarActions)
+        {
+            if (b.Tier == ResolutionTier.HotbarSlot)
+                return true;
+
+            return b.Directions?.Exists(d => d.Tier == ResolutionTier.HotbarSlot) == true;
+        }
+
+        return b.Tier != ResolutionTier.Empty || cfg.ShowEmptyButtons;
+    }
+
     public override void PreDraw()
     {
         Flags = ImGuiWindowFlags.NoTitleBar
@@ -110,8 +140,12 @@ internal sealed class OverlayWindow : Window
             MaximumSize = new Vector2(4000, 4000),
         };
 
+        opacity = cfg.Opacity;
+        if (cfg.DimOutOfCombat && !Plugin.Condition[ConditionFlag.InCombat])
+            opacity *= cfg.OutOfCombatOpacity;
+
         IsClickthrough = cfg.Locked;
-        BgAlpha = cfg.Opacity * 0.5f;
+        BgAlpha = opacity * 0.5f;
     }
 
     public override void Draw()
@@ -130,16 +164,46 @@ internal sealed class OverlayWindow : Window
             return;
         }
 
+        var visible = new List<LayoutButton>();
+        int minCol = int.MaxValue, minRow = int.MaxValue, maxCol = 0, maxRow = 0;
+
+        foreach (var lb in dev.Buttons)
+        {
+            if (!buttons.TryGetValue(lb.Id, out var b) || !IsVisible(b))
+                continue;
+
+            visible.Add(lb);
+            minCol = Math.Min(minCol, lb.Col);
+            minRow = Math.Min(minRow, lb.Row);
+            maxCol = Math.Max(maxCol, lb.Col + lb.ColSpan - 1);
+            maxRow = Math.Max(maxRow, lb.Row + lb.RowSpan - 1);
+        }
+
+        if (visible.Count == 0)
+        {
+            ImGui.TextUnformatted(cfg.OnlyHotbarActions
+                ? "No button on this profile is bound to a hotbar action."
+                : "Nothing to show.");
+            return;
+        }
+
+        // Hiding buttons can empty whole rows and columns at the edges. Trim to
+        // what's left rather than keeping a border of nothing -- interior gaps
+        // stay, because the point of the HUD is where the buttons are on the
+        // keypad, and closing those up would break the mapping to your hand.
+        var columns = maxCol - minCol + 1;
+        var rows = maxRow - minRow + 1;
+
         // One scalar drives every rect this frame. Scale is applied here and
         // nowhere else -- mixing it with SetWindowFontScale is what makes hover
         // rects drift away from what's drawn.
         var avail = ImGui.GetContentRegionAvail();
         var cell = cfg.ScaleToWindow
-            ? dev.CellSizeToFit(avail, cfg.GapRatio)
+            ? dev.CellSizeToFit(avail, cfg.GapRatio, columns, rows)
             : cfg.CellSize * ImGuiHelpers.GlobalScale;
 
         var gap = cell * cfg.GapRatio;
-        var grid = dev.GridSize(cell, gap);
+        var grid = dev.GridSize(cell, gap, columns, rows);
 
         // Fitting preserves the grid's proportions, so one axis has slack.
         // Centre in it rather than letting the keypad sit in a corner.
@@ -149,15 +213,10 @@ internal sealed class OverlayWindow : Window
 
         var draw = ImGui.GetWindowDrawList();
 
-        foreach (var lb in dev.Buttons)
+        foreach (var lb in visible)
         {
-            if (!buttons.TryGetValue(lb.Id, out var b))
-                continue;
-            if (b.Tier == ResolutionTier.Empty && !cfg.ShowEmptyButtons)
-                continue;
-
-            var (offset, size) = dev.Rect(lb, cell, gap);
-            DrawButton(draw, b, origin + offset, size, cell);
+            var (offset, size) = dev.Rect(lb, cell, gap, minCol, minRow);
+            DrawButton(draw, buttons[lb.Id], origin + offset, size, cell);
         }
 
         // Only the shrink-wrapping mode needs something to measure. Reserving
@@ -181,7 +240,12 @@ internal sealed class OverlayWindow : Window
         draw.PushClipRect(pos, p1, true);
 
         if (cfg.ShowButtonPanels)
-            draw.AddRectFilled(pos, p1, Palette.Panel(col, b.Tier, cfg.Opacity), rounding);
+            draw.AddRectFilled(pos, p1, Palette.Panel(col, b.Tier, opacity), rounding);
+
+        // Wrap first: the icon centres in whatever space the name leaves, so it
+        // has to know how many lines the name actually took.
+        WrapTitle(b, size.X, cell);
+        var strip = TitleStrip(cell);
 
         if (b.IsStick)
         {
@@ -189,8 +253,7 @@ internal sealed class OverlayWindow : Window
         }
         else if (cfg.ShowIcons && b.IconId != 0)
         {
-            DrawIcon(draw, b, pos, size, cfg.Opacity, col.IconUnusable,
-                cfg.IconScale, TitleStrip(b, cell));
+            DrawIcon(draw, b, pos, size, opacity, col.IconUnusable, cfg.IconScale, strip);
         }
 
         if (cfg.ShowCooldown && b.CooldownPct > 0f)
@@ -199,35 +262,44 @@ internal sealed class OverlayWindow : Window
         if (b.Tier == ResolutionTier.HotbarSlot)
         {
             if (cfg.DimUnusable && !b.Usable)
-                draw.AddRectFilled(pos, p1, Palette.Of(col.Unusable, cfg.Opacity), rounding);
+                draw.AddRectFilled(pos, p1, Palette.Of(col.Unusable, opacity), rounding);
 
             // Out of range is its own state: the action is fine, you just can't
             // reach. Grey would read as "unusable", so this gets its own color.
             if (cfg.ShowRangeTint && !b.InRange)
-                draw.AddRectFilled(pos, p1, Palette.Of(col.OutOfRange, cfg.Opacity), rounding);
+                draw.AddRectFilled(pos, p1, Palette.Of(col.OutOfRange, opacity), rounding);
+        }
+
+        // A finished cooldown fades out over its flash; a proc stays lit while
+        // the game says so. Different events, so they look different.
+        var flash = cfg.ShowReadyFlash ? ReadyFlashStrength(b) : 0f;
+        if (flash > 0f)
+        {
+            draw.AddRect(pos, p1, Palette.Of(col.ReadyFlash with { W = col.ReadyFlash.W * flash }, opacity),
+                rounding, ImDrawFlags.None, 3.5f);
         }
 
         var procing = cfg.ShowProcGlow && b.Highlighted && b.Tier == ResolutionTier.HotbarSlot;
         if (procing)
         {
             // Inner wash plus a heavier rim, both inside the cell's clip rect.
-            draw.AddRectFilled(pos, p1, Palette.Of(col.ProcGlow, cfg.Opacity), rounding);
-            draw.AddRect(pos, p1, Palette.Of(col.Proc, cfg.Opacity),
+            draw.AddRectFilled(pos, p1, Palette.Of(col.ProcGlow, opacity), rounding);
+            draw.AddRect(pos, p1, Palette.Of(col.Proc, opacity),
                 rounding, ImDrawFlags.None, 3.5f);
         }
 
         draw.AddRect(
             pos, p1,
             pressed
-                ? Palette.Of(col.KeyHeld, cfg.Opacity)
-                : Palette.Border(col, b.Tier, cfg.Opacity),
+                ? Palette.Of(col.KeyHeld, opacity)
+                : Palette.Border(col, b.Tier, opacity),
             rounding, ImDrawFlags.None, pressed ? 2.5f : 1.5f);
 
         if (!b.IsStick)
             DrawText(draw, b, pos, size, cell);
 
         if (cfg.ShowSecondaryPips && (b.HasLongPress || b.HasDoublePress))
-            DrawPips(draw, b, pos, size, cell, cfg.Opacity, col.Pip);
+            DrawPips(draw, b, pos, size, cell, opacity, col.Pip);
 
         draw.PopClipRect();
 
@@ -284,27 +356,24 @@ internal sealed class OverlayWindow : Window
         var offset = StickOffset(b) * (baseRadius - knobRadius);
         var active = offset.LengthSquared() > 0.0001f;
 
-        draw.AddCircleFilled(centre, baseRadius, Palette.Of(col.StickBase, cfg.Opacity), 32);
-        draw.AddCircle(centre, baseRadius, Palette.Of(col.StickRim, cfg.Opacity), 32, 1.5f);
+        draw.AddCircleFilled(centre, baseRadius, Palette.Of(col.StickBase, opacity), 32);
+        draw.AddCircle(centre, baseRadius, Palette.Of(col.StickRim, opacity), 32, 1.5f);
         draw.AddCircleFilled(centre + offset, knobRadius,
-            Palette.Of(active ? col.StickKnobActive : col.StickKnob, cfg.Opacity), 24);
+            Palette.Of(active ? col.StickKnobActive : col.StickKnob, opacity), 24);
 
         if (b.Title.Length == 0)
             return;
 
         // Under the disc, or along the bottom of the cell when the ring is busy.
-        var scale = cell / ImGui.GetFontSize() * 0.17f;
-        var fontSize = ImGui.GetFontSize() * scale;
-        var extent = ImGui.CalcTextSize(b.Title) * scale;
+        var fontSize = LabelSize(cell, 0.17f);
+        var extent = ImGui.CalcTextSize(b.Title) * (fontSize / ImGui.GetFontSize());
         var titleY = hasDirections
             ? pos.Y + size.Y - fontSize - (cell * 0.06f)
             : centre.Y + baseRadius + (cell * 0.08f);
 
         draw.PushClipRect(pos, pos + size, true);
-        draw.AddText(ImGui.GetFont(), fontSize,
-            new Vector2(centre.X - (extent.X / 2f), titleY),
-            Palette.Of(hasDirections ? col.TextTitle : col.TextTitleDim, cfg.Opacity),
-            b.Title);
+        Label(draw, fontSize, new Vector2(centre.X - (extent.X / 2f), titleY),
+            Palette.Of(hasDirections ? col.TextTitle : col.TextTitleDim, opacity), b.Title);
         draw.PopClipRect();
     }
 
@@ -365,13 +434,13 @@ internal sealed class OverlayWindow : Window
         var rounding = slot * 0.18f;
 
         if (cfg.ShowButtonPanels)
-            draw.AddRectFilled(p0, p1, Palette.Panel(col, d.Tier, cfg.Opacity), rounding);
+            draw.AddRectFilled(p0, p1, Palette.Panel(col, d.Tier, opacity), rounding);
 
         if (cfg.ShowIcons && d.IconId != 0)
         {
             // A direction slot has no label strip, so the same setting can fill
             // more of it before it looks cramped.
-            DrawIcon(draw, d, p0, new Vector2(slot), cfg.Opacity, col.IconUnusable,
+            DrawIcon(draw, d, p0, new Vector2(slot), opacity, col.IconUnusable,
                 MathF.Min(0.96f, cfg.IconScale * 1.3f));
         }
         else
@@ -381,26 +450,22 @@ internal sealed class OverlayWindow : Window
             // clipped "Move Forwa" is worse than a legible "W". Short names
             // like "Jump" or "Sprint" win; long ones fall back to the key and
             // live in the tooltip instead.
-            var scale = cell / ImGui.GetFontSize() * 0.15f;
-            var fontSize = ImGui.GetFontSize() * scale;
+            var fontSize = LabelSize(cell, 0.15f);
+            var ratio = fontSize / ImGui.GetFontSize();
             var text = d.Chord;
 
-            if (d.Title.Length > 0 && d.Title != d.Chord)
-            {
-                var titleWidth = ImGui.CalcTextSize(d.Title).X * scale;
-                if (titleWidth <= slot * 0.92f)
-                    text = d.Title;
-            }
+            if (d.Title.Length > 0 && d.Title != d.Chord
+                && ImGui.CalcTextSize(d.Title).X * ratio <= slot * 0.92f)
+                text = d.Title;
 
             if (text.Length == 0)
                 text = d.Title;
 
             if (text.Length > 0)
             {
-                var extent = ImGui.CalcTextSize(text) * scale;
+                var extent = ImGui.CalcTextSize(text) * ratio;
                 draw.PushClipRect(p0, p1, true);
-                draw.AddText(ImGui.GetFont(), fontSize,
-                    centre - (extent / 2f), Palette.Of(col.TextTitle, cfg.Opacity), text);
+                Label(draw, fontSize, centre - (extent / 2f), Palette.Of(col.TextTitle, opacity), text);
                 draw.PopClipRect();
             }
         }
@@ -408,25 +473,68 @@ internal sealed class OverlayWindow : Window
         if (cfg.ShowCooldown && d.CooldownPct > 0f)
         {
             draw.AddRectFilled(p0, new Vector2(p1.X, p0.Y + (slot * d.CooldownPct)),
-                Palette.Of(col.Cooldown, cfg.Opacity));
+                Palette.Of(col.Cooldown, opacity));
         }
 
         if (d.Tier == ResolutionTier.HotbarSlot)
         {
             if (cfg.DimUnusable && !d.Usable)
-                draw.AddRectFilled(p0, p1, Palette.Of(col.Unusable, cfg.Opacity), rounding);
+                draw.AddRectFilled(p0, p1, Palette.Of(col.Unusable, opacity), rounding);
             if (cfg.ShowRangeTint && !d.InRange)
-                draw.AddRectFilled(p0, p1, Palette.Of(col.OutOfRange, cfg.Opacity), rounding);
+                draw.AddRectFilled(p0, p1, Palette.Of(col.OutOfRange, opacity), rounding);
         }
 
         if (cfg.ShowProcGlow && d.Highlighted && d.Tier == ResolutionTier.HotbarSlot)
         {
-            draw.AddRectFilled(p0, p1, Palette.Of(col.ProcGlow, cfg.Opacity), rounding);
-            draw.AddRect(p0, p1, Palette.Of(col.Proc, cfg.Opacity), rounding, ImDrawFlags.None, 2.5f);
+            draw.AddRectFilled(p0, p1, Palette.Of(col.ProcGlow, opacity), rounding);
+            draw.AddRect(p0, p1, Palette.Of(col.Proc, opacity), rounding, ImDrawFlags.None, 2.5f);
         }
 
-        draw.AddRect(p0, p1, Palette.Border(col, d.Tier, cfg.Opacity), rounding, ImDrawFlags.None, 1f);
+        draw.AddRect(p0, p1, Palette.Border(col, d.Tier, opacity), rounding, ImDrawFlags.None, 1f);
     }
+
+    /// <summary>
+    /// Draw a label, optionally over a dark outline.
+    ///
+    /// The HUD sits on anything from a white wall to a dark cave, and with the
+    /// panels turned off there is nothing behind the text at all. Stamping the
+    /// glyphs in the outline color at eight offsets first costs a few draw
+    /// calls per label and makes them readable over any of it.
+    /// </summary>
+    private void Label(ImDrawListPtr draw, float fontSize, Vector2 pos, uint color, string text)
+    {
+        if (cfg.ShowTextOutline)
+        {
+            var o = MathF.Max(1f, fontSize * 0.09f);
+            var outline = Palette.Of(cfg.Colors.TextOutline, opacity);
+            var font = ImGui.GetFont();
+
+            for (var dx = -1; dx <= 1; dx++)
+            for (var dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0)
+                    continue;
+
+                draw.AddText(font, fontSize, pos + new Vector2(dx * o, dy * o), outline, text);
+            }
+        }
+
+        draw.AddText(ImGui.GetFont(), fontSize, pos, color, text);
+    }
+
+    /// <summary>How bright the cooldown-finished flash is right now, 0 when over.</summary>
+    private static float ReadyFlashStrength(ResolvedButton b)
+    {
+        var remaining = b.ReadyFlashUntil - DateTime.UtcNow;
+        if (remaining <= TimeSpan.Zero)
+            return 0f;
+
+        return MathF.Min(1f, (float)(remaining.TotalMilliseconds / 650d));
+    }
+
+    /// <summary>A label's size, as a fraction of the cell, after the user's scale.</summary>
+    private float LabelSize(float cell, float fraction) =>
+        cell * fraction * cfg.TextScale;
 
     /// <summary>
     /// Draw a slot's icon, centred in whatever space it has.
@@ -454,11 +562,68 @@ internal sealed class OverlayWindow : Window
     }
 
     /// <summary>
-    /// Height of the label strip at the foot of a cell. Mirrors what
-    /// <see cref="DrawText"/> lays out, so the icon can centre above it.
+    /// Height of the label strip at the foot of a cell, for however many lines
+    /// the name wrapped onto. Mirrors what <see cref="DrawText"/> lays out, so
+    /// the icon can centre above it.
     /// </summary>
-    private float TitleStrip(ResolvedButton b, float cell) =>
-        b.Title.Length == 0 ? 0f : (cell * 0.19f) + (cell * 0.06f);
+    private float TitleStrip(float cell) =>
+        titleLines.Count == 0
+            ? 0f
+            : (titleLines.Count * LineHeight(cell)) + (cell * 0.06f);
+
+    private float LineHeight(float cell) => LabelSize(cell, 0.19f) * 1.05f;
+
+    /// <summary>
+    /// Break the action name into at most <see cref="Configuration.NameLines"/>
+    /// lines that fit the cell. Greedy word wrap -- action names are two or
+    /// three short words, so there is nothing to gain from anything cleverer.
+    /// A single word too wide to fit is left long and clipped at the edge.
+    /// </summary>
+    private void WrapTitle(ResolvedButton b, float width, float cell)
+    {
+        titleLines.Clear();
+
+        if (!cfg.ShowActionName || b.Title.Length == 0)
+            return;
+
+        var maxLines = Math.Clamp(cfg.NameLines, 1, 3);
+        var ratio = LabelSize(cell, 0.19f) / ImGui.GetFontSize();
+        var limit = width - (cell * 0.1f);
+
+        if (maxLines == 1 || ImGui.CalcTextSize(b.Title).X * ratio <= limit)
+        {
+            titleLines.Add(b.Title);
+            return;
+        }
+
+        var words = b.Title.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var line = string.Empty;
+
+        foreach (var word in words)
+        {
+            var candidate = line.Length == 0 ? word : $"{line} {word}";
+            if (ImGui.CalcTextSize(candidate).X * ratio <= limit || line.Length == 0)
+            {
+                line = candidate;
+                continue;
+            }
+
+            titleLines.Add(line);
+            line = word;
+
+            // Out of room: put everything remaining on the last line and let
+            // it clip, rather than silently dropping words.
+            if (titleLines.Count == maxLines - 1)
+                break;
+        }
+
+        var consumed = titleLines.Sum(l => l.Split(' ').Length);
+        if (titleLines.Count == maxLines - 1 && consumed < words.Length)
+            line = string.Join(' ', words.Skip(consumed));
+
+        if (line.Length > 0)
+            titleLines.Add(line);
+    }
 
     /// <summary>
     /// Dark veil that drains off the top as the recast elapses.
@@ -474,7 +639,7 @@ internal sealed class OverlayWindow : Window
         draw.AddRectFilled(
             pos,
             new Vector2(pos.X + size.X, pos.Y + (size.Y * b.CooldownPct)),
-            Palette.Of(col.Cooldown, cfg.Opacity));
+            Palette.Of(col.Cooldown, opacity));
 
         if (!cfg.ShowCooldownNumerals || b.CooldownSeconds <= 0)
             return;
@@ -482,10 +647,9 @@ internal sealed class OverlayWindow : Window
         var centre = pos + (size / 2f);
 
         var text = b.CooldownSeconds.ToString();
-        var scale = cell / ImGui.GetFontSize() * 0.34f;
-        var extent = ImGui.CalcTextSize(text) * scale;
-        draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-            centre - (extent / 2f), Palette.Of(col.TextTitle, cfg.Opacity), text);
+        var fontSize = LabelSize(cell, 0.34f);
+        var extent = ImGui.CalcTextSize(text) * (fontSize / ImGui.GetFontSize());
+        Label(draw, fontSize, centre - (extent / 2f), Palette.Of(col.TextTitle, opacity), text);
     }
 
     private void DrawText(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
@@ -495,48 +659,50 @@ internal sealed class OverlayWindow : Window
 
         if (cfg.ShowChord && b.Chord.Length > 0)
         {
-            var scale = cell / ImGui.GetFontSize() * 0.17f;
-            draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-                pos + new Vector2(pad, pad), Palette.Of(col.TextKey, cfg.Opacity), b.Chord);
+            Label(draw, LabelSize(cell, 0.17f), pos + new Vector2(pad, pad),
+                Palette.Of(col.TextKey, opacity), b.Chord);
         }
 
         if (b.Charges > 1)
         {
             var text = b.Charges.ToString();
-            var scale = cell / ImGui.GetFontSize() * 0.2f;
-            var extent = ImGui.CalcTextSize(text) * scale;
-            draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-                new Vector2(pos.X + size.X - extent.X - pad, pos.Y + pad),
-                Palette.Of(col.TextCharges, cfg.Opacity), text);
+            var fontSize = LabelSize(cell, 0.2f);
+            var extent = ImGui.CalcTextSize(text) * (fontSize / ImGui.GetFontSize());
+            Label(draw, fontSize, new Vector2(pos.X + size.X - extent.X - pad, pos.Y + pad),
+                Palette.Of(col.TextCharges, opacity), text);
         }
 
         if (cfg.ShowCost && b.CostText is { Length: > 0 })
         {
-            var scale = cell / ImGui.GetFontSize() * 0.16f;
-            var extent = ImGui.CalcTextSize(b.CostText) * scale;
-            draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-                new Vector2(pos.X + pad, pos.Y + size.Y - extent.Y - pad),
-                Palette.Of(col.TextCost, cfg.Opacity), b.CostText);
+            var fontSize = LabelSize(cell, 0.16f);
+            var extent = ImGui.CalcTextSize(b.CostText) * (fontSize / ImGui.GetFontSize());
+            Label(draw, fontSize, new Vector2(pos.X + pad, pos.Y + size.Y - extent.Y - pad),
+                Palette.Of(col.TextCost, opacity), b.CostText);
         }
 
-        if (b.Title.Length == 0)
+        if (titleLines.Count == 0)
             return;
 
-        // The title gets the bottom strip, clipped rather than ellipsised --
-        // action names are long and the cell is narrow.
-        var titleScale = cell / ImGui.GetFontSize() * 0.19f;
-        var titleSize = ImGui.GetFontSize() * titleScale;
-        var measured = ImGui.CalcTextSize(b.Title) * titleScale;
-        var titlePos = new Vector2(
-            pos.X + MathF.Max(pad, (size.X - measured.X) / 2f),
-            pos.Y + size.Y - titleSize - pad);
+        // The name gets the bottom strip, stacked upwards so it always sits
+        // flush with the foot of the cell however many lines it took.
+        var titleSize = LabelSize(cell, 0.19f);
+        var lineHeight = LineHeight(cell);
+        var ratio = titleSize / ImGui.GetFontSize();
+        var color = Palette.Of(
+            b.Tier is ResolutionTier.Empty or ResolutionTier.RawKey ? col.TextTitleDim : col.TextTitle,
+            opacity);
 
         draw.PushClipRect(pos + new Vector2(pad * 0.5f, 0), pos + size - new Vector2(pad * 0.5f, 0), true);
-        draw.AddText(ImGui.GetFont(), titleSize, titlePos,
-            Palette.Of(
-                b.Tier is ResolutionTier.Empty or ResolutionTier.RawKey ? col.TextTitleDim : col.TextTitle,
-                cfg.Opacity),
-            b.Title);
+
+        var top = pos.Y + size.Y - pad - (titleLines.Count * lineHeight);
+        for (var i = 0; i < titleLines.Count; i++)
+        {
+            var measured = ImGui.CalcTextSize(titleLines[i]).X * ratio;
+            Label(draw, titleSize,
+                new Vector2(pos.X + MathF.Max(pad, (size.X - measured) / 2f), top + (i * lineHeight)),
+                color, titleLines[i]);
+        }
+
         draw.PopClipRect();
     }
 

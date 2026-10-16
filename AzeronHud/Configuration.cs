@@ -62,6 +62,32 @@ public sealed class Configuration : IPluginConfiguration
     // --- what each button shows -------------------------------------------
 
     public bool ShowChord = true;
+
+    /// <summary>The action name along the foot of a button. Off gives an icon-only HUD.</summary>
+    public bool ShowActionName = true;
+
+    /// <summary>
+    /// How many lines the action name may wrap onto. Two is enough for most of
+    /// the long ones -- "Presence of Mind", "Perfect Balance" -- without the
+    /// text crowding out the icon.
+    /// </summary>
+    public int NameLines = 2;
+
+    /// <summary>Multiplier on every label's size. 1.0 is the built-in proportions.</summary>
+    public float TextScale = 1f;
+
+    /// <summary>
+    /// Draw labels over a dark outline. The HUD sits on anything from a white
+    /// wall to a dark cave, and flat text on no panel is unreadable over half
+    /// of it.
+    /// </summary>
+    public bool ShowTextOutline = true;
+
+    /// <summary>
+    /// Show only buttons bound to a hotbar action, and trim the grid to what's
+    /// left. Turns the full keypad reference into a combat-sized HUD.
+    /// </summary>
+    public bool OnlyHotbarActions;
     public bool ShowIcons = true;
 
     /// <summary>
@@ -81,6 +107,9 @@ public sealed class Configuration : IPluginConfiguration
 
     /// <summary>MP or item count in the button's corner.</summary>
     public bool ShowCost = true;
+
+    /// <summary>Brief pulse when a cooldown longer than a GCD comes back up.</summary>
+    public bool ShowReadyFlash = true;
     public bool ShowEmptyButtons = true;
     public bool ShowSecondaryPips = true;
 
@@ -90,6 +119,12 @@ public sealed class Configuration : IPluginConfiguration
     // --- visibility --------------------------------------------------------
 
     public bool HideInCutscenes = true;
+
+    /// <summary>Fade the HUD down when you're not fighting.</summary>
+    public bool DimOutOfCombat;
+
+    /// <summary>Opacity multiplier applied while out of combat.</summary>
+    public float OutOfCombatOpacity = 0.45f;
 
     /// <summary>Virtual-key code for the toggle hotkey, 0 for none.</summary>
     public int HotkeyVk;

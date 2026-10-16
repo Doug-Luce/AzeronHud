@@ -73,23 +73,51 @@ internal sealed class DeviceLayout
     /// width  = cell * (cols + (cols-1) * gapRatio)
     /// height = cell * (rows * aspect + (rows-1) * gapRatio)
     /// </summary>
-    internal float CellSizeToFit(Vector2 box, float gapRatio)
+    internal float CellSizeToFit(Vector2 box, float gapRatio) =>
+        CellSizeToFit(box, gapRatio, Columns, Rows);
+
+    /// <summary>
+    /// As above, for a trimmed grid. Hiding buttons can leave whole rows and
+    /// columns empty at the edges, and the HUD shrinks to what is left rather
+    /// than keeping a border of nothing.
+    /// </summary>
+    internal float CellSizeToFit(Vector2 box, float gapRatio, int columns, int rows)
     {
-        if (Columns <= 0 || Rows <= 0)
+        if (columns <= 0 || rows <= 0)
             return 1f;
 
-        var byWidth = box.X / (Columns + ((Columns - 1) * gapRatio));
-        var byHeight = box.Y / ((Rows * CellAspect) + ((Rows - 1) * gapRatio));
+        var byWidth = box.X / (columns + ((columns - 1) * gapRatio));
+        var byHeight = box.Y / ((rows * CellAspect) + ((rows - 1) * gapRatio));
         return MathF.Max(1f, MathF.Min(byWidth, byHeight));
     }
 
     /// <summary>Total pixel size of the whole grid at this cell width.</summary>
-    internal Vector2 GridSize(float cellWidth, float gap)
+    internal Vector2 GridSize(float cellWidth, float gap) =>
+        GridSize(cellWidth, gap, Columns, Rows);
+
+    internal Vector2 GridSize(float cellWidth, float gap, int columns, int rows)
     {
         var cellHeight = cellWidth * CellAspect;
         return new Vector2(
-            (Columns * cellWidth) + ((Columns - 1) * gap),
-            (Rows * cellHeight) + ((Rows - 1) * gap));
+            (columns * cellWidth) + ((columns - 1) * gap),
+            (rows * cellHeight) + ((rows - 1) * gap));
+    }
+
+    /// <summary>
+    /// Pixel rect for a button within a grid whose top-left cell is
+    /// (<paramref name="originCol"/>, <paramref name="originRow"/>).
+    /// </summary>
+    internal (Vector2 Pos, Vector2 Size) Rect(
+        LayoutButton b, float cellWidth, float gap, int originCol, int originRow)
+    {
+        var cellHeight = cellWidth * CellAspect;
+        var pos = new Vector2(
+            (b.Col - originCol) * (cellWidth + gap),
+            (b.Row - originRow) * (cellHeight + gap));
+        var size = new Vector2(
+            (b.ColSpan * cellWidth) + ((b.ColSpan - 1) * gap),
+            (b.RowSpan * cellHeight) + ((b.RowSpan - 1) * gap));
+        return (pos, size);
     }
 
     private static Dictionary<int, DeviceLayout> LoadEmbedded()

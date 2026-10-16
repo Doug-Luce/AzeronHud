@@ -44,6 +44,22 @@ On Linux under Wine, the prefix maps `Z:` to the filesystem root, so the default
 
 Edits you make in the Azeron app show up within a couple of seconds, with no reload.
 
+## Making it readable
+
+Labels are drawn over a dark outline by default, because the HUD sits on anything from a white Limsa wall
+to a dark cave and flat text with no panel behind it is unreadable over half of that. Action names wrap to
+up to three lines, so "Presence of Mind" fits instead of being clipped.
+
+Action names, the key text and the icons each have their own toggle and size control, so an icon-only
+HUD is just a matter of turning the names off.
+
+**Only buttons bound to a hotbar action** trims the HUD to your abilities. Empty rows and columns at the
+edges close up, but gaps between buttons stay — the point of the layout is matching your hand, and
+closing those would break it.
+
+**Dim when out of combat** fades the whole thing down until you're fighting, and a button flashes briefly
+when a cooldown longer than a GCD comes back up. Routine GCD recasts don't flash, or it would strobe.
+
 ## Colors
 
 Every color is editable under Settings → Colors, with a reset. Buttons are deliberately not tinted by how

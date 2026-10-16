@@ -181,6 +181,13 @@ internal sealed class ConfigWindow : Window
             cfg.Save();
         }
 
+        var text = cfg.TextScale;
+        if (ImGui.SliderFloat("Label size", ref text, 0.5f, 2.0f, "%.2fx"))
+        {
+            cfg.TextScale = text;
+            cfg.Save();
+        }
+
         var alpha = cfg.Opacity;
         if (ImGui.SliderFloat("Opacity", ref alpha, 0.2f, 1f, "%.2f"))
         {
@@ -220,6 +227,7 @@ internal sealed class ConfigWindow : Window
             cfg.ScaleToWindow = d.ScaleToWindow;
             cfg.CellSize = d.CellSize;
             cfg.IconScale = d.IconScale;
+            cfg.TextScale = d.TextScale;
             cfg.GapRatio = d.GapRatio;
             cfg.Opacity = d.Opacity;
             cfg.Rounding = d.Rounding;
@@ -237,7 +245,21 @@ internal sealed class ConfigWindow : Window
             return;
 
         Toggle("Action icons", ref cfg.ShowIcons);
+        Toggle("Action names", ref cfg.ShowActionName);
+
+        using (ImRaii.Disabled(!cfg.ShowActionName))
+        {
+            var lines = cfg.NameLines;
+            ImGui.SetNextItemWidth(220);
+            if (ImGui.SliderInt("Lines a name may wrap to", ref lines, 1, 3))
+            {
+                cfg.NameLines = lines;
+                cfg.Save();
+            }
+        }
+
         Toggle("Key each button sends", ref cfg.ShowChord);
+        Toggle("Dark outline behind text", ref cfg.ShowTextOutline);
         Toggle("Cooldown sweep", ref cfg.ShowCooldown);
         Toggle("Cooldown seconds", ref cfg.ShowCooldownNumerals);
         Toggle("Dim unusable actions", ref cfg.DimUnusable);
@@ -245,7 +267,14 @@ internal sealed class ConfigWindow : Window
         Toggle("Tint when out of range", ref cfg.ShowRangeTint);
         Toggle("MP / item cost", ref cfg.ShowCost);
         Toggle("Highlight the key being held", ref cfg.HighlightPressed);
-        Toggle("Unassigned buttons", ref cfg.ShowEmptyButtons);
+        Toggle("Flash when a cooldown finishes", ref cfg.ShowReadyFlash);
+
+        ImGui.Spacing();
+        Toggle("Only buttons bound to a hotbar action", ref cfg.OnlyHotbarActions);
+        ImGui.TextDisabled("Trims the HUD to your abilities. Empty edges close up; gaps between\nbuttons stay, so the layout still matches your hand.");
+
+        using (ImRaii.Disabled(cfg.OnlyHotbarActions))
+            Toggle("Unassigned buttons", ref cfg.ShowEmptyButtons);
         Toggle("Long-press / double-press dots", ref cfg.ShowSecondaryPips);
 
         ResetButton("content", () =>
@@ -259,6 +288,11 @@ internal sealed class ConfigWindow : Window
             cfg.ShowProcGlow = d.ShowProcGlow;
             cfg.ShowRangeTint = d.ShowRangeTint;
             cfg.ShowCost = d.ShowCost;
+            cfg.ShowActionName = d.ShowActionName;
+            cfg.NameLines = d.NameLines;
+            cfg.ShowTextOutline = d.ShowTextOutline;
+            cfg.ShowReadyFlash = d.ShowReadyFlash;
+            cfg.OnlyHotbarActions = d.OnlyHotbarActions;
             cfg.HighlightPressed = d.HighlightPressed;
             cfg.ShowEmptyButtons = d.ShowEmptyButtons;
             cfg.ShowSecondaryPips = d.ShowSecondaryPips;
@@ -297,6 +331,7 @@ internal sealed class ConfigWindow : Window
             Color("Proc outline", ref c.Proc);
             Color("Proc wash", ref c.ProcGlow);
             Color("Key held", ref c.KeyHeld);
+            Color("Cooldown finished", ref c.ReadyFlash);
         }
 
         if (ImGui.CollapsingHeader("Text"))
@@ -306,6 +341,7 @@ internal sealed class ConfigWindow : Window
             Color("Key", ref c.TextKey);
             Color("Cost", ref c.TextCost);
             Color("Charges", ref c.TextCharges);
+            Color("Text outline", ref c.TextOutline);
             Color("Long/double-press dots", ref c.Pip);
         }
 
@@ -388,6 +424,18 @@ internal sealed class ConfigWindow : Window
         ImGui.Spacing();
 
         Toggle("Hide during cutscenes", ref cfg.HideInCutscenes);
+        Toggle("Dim when out of combat", ref cfg.DimOutOfCombat);
+
+        using (ImRaii.Disabled(!cfg.DimOutOfCombat))
+        {
+            var dim = cfg.OutOfCombatOpacity;
+            ImGui.SetNextItemWidth(220);
+            if (ImGui.SliderFloat("Out-of-combat opacity", ref dim, 0.05f, 1f, "%.2f"))
+            {
+                cfg.OutOfCombatOpacity = dim;
+                cfg.Save();
+            }
+        }
 
         ImGui.EndTabItem();
     }

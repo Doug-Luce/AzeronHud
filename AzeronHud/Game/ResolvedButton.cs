@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using AzeronHud.Azeron;
 
@@ -59,6 +60,12 @@ internal sealed class ResolvedButton
 
     /// <summary>Change detector so the cost string is only decoded when it moves.</summary>
     internal uint LastCostValue = uint.MaxValue;
+
+    /// <summary>Longest remaining time seen during the cooldown now running.</summary>
+    internal int PeakCooldownSeconds;
+
+    /// <summary>Flash until this moment, set when a long cooldown finishes.</summary>
+    internal DateTime ReadyFlashUntil = DateTime.MinValue;
 
     /// <summary>Set when the button also has a long-press or double-press bind.</summary>
     internal bool HasLongPress;
