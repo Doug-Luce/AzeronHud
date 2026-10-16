@@ -251,11 +251,11 @@ internal sealed class ConfigWindow : Window
         }
 
         ImGui.TextWrapped(cfg.Locked
-            ? "Locked: the HUD is inert. Clicks and drags over it go straight to the game, "
-              + "and there are no tooltips. Unlock to move or resize it."
-            : "Unlocked: you can drag and resize the HUD, and hovering a button shows what it "
-              + "does. While unlocked the mouse is captured over the HUD, so lock it once "
-              + "you're happy with the position. /azeronhud lock toggles this.");
+            ? "On: the HUD is inert. Clicks and drags over it go straight to the game, "
+              + "and there are no tooltips. Turn it off to move or resize it."
+            : "Off: you can drag and resize the HUD, and hovering a button shows what it "
+              + "does. While it's off the mouse is captured over the HUD, so turn it on once "
+              + "you're happy with the position.");
 
         ResetButton("appearance", () =>
         {

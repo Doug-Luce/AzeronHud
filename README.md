@@ -30,12 +30,12 @@ than silently going blank.
 Hidden by default. Toggle it with `/azeronhud` (or `/azhud`), or bind a key in the settings — and it
 reopens on load if it was open when you last quit.
 
-Position and size it, then turn on **click-through** (`/azeronhud lock`, or the checkbox in Appearance)
-so it stops taking the mouse. A click-through HUD is completely inert — clicks and drags over it go
-straight to the game — which also means you turn it off again to move or resize it.
+Position and size it, then turn on **click-through** in Appearance so it stops taking the mouse. A
+click-through HUD is completely inert — clicks and drags over it go straight to the game — which also
+means you turn it off again to move or resize it.
 
-The keypad keeps its proportions, so a window of a different shape leaves an empty band. `/azeronhud fit`
-snaps the window to the keypad, and it does that automatically when hiding buttons reshapes the grid.
+The keypad keeps its proportions, so a window of a different shape leaves an empty band. **Fit window to
+keypad** in Appearance snaps it, and it does that automatically when hiding buttons reshapes the grid.
 
 ## Supported hardware
 
@@ -84,8 +84,6 @@ color and the opacity slider multiplies on top.
 | `/azeronhud` | Show or hide the HUD |
 | `/azeronhud config` | Open settings |
 | `/azeronhud reload` | Re-read the profile and keybind table |
-| `/azeronhud lock` | Click-through: no mouse input, no moving, no tooltips |
-| `/azeronhud fit` | Snap the window to the keypad |
 | `/azeronhud dump` | Print the full resolution chain to the Dalamud log |
 
 `dump` is the thing to reach for when a button says something you don't expect: it prints every button's
