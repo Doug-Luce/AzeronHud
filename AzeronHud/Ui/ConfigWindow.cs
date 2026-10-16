@@ -174,6 +174,13 @@ internal sealed class ConfigWindow : Window
             cfg.Save();
         }
 
+        var icon = cfg.IconScale;
+        if (ImGui.SliderFloat("Icon size", ref icon, 0.35f, 1.0f, "%.2f"))
+        {
+            cfg.IconScale = icon;
+            cfg.Save();
+        }
+
         var alpha = cfg.Opacity;
         if (ImGui.SliderFloat("Opacity", ref alpha, 0.2f, 1f, "%.2f"))
         {
@@ -212,6 +219,7 @@ internal sealed class ConfigWindow : Window
             var d = new Configuration();
             cfg.ScaleToWindow = d.ScaleToWindow;
             cfg.CellSize = d.CellSize;
+            cfg.IconScale = d.IconScale;
             cfg.GapRatio = d.GapRatio;
             cfg.Opacity = d.Opacity;
             cfg.Rounding = d.Rounding;

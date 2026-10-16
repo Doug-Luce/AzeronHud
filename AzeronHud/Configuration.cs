@@ -63,6 +63,12 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool ShowChord = true;
     public bool ShowIcons = true;
+
+    /// <summary>
+    /// Icon size as a fraction of the space available in a cell, once the
+    /// label strip is set aside. 1.0 fills that space edge to edge.
+    /// </summary>
+    public float IconScale = 0.68f;
     public bool ShowCooldown = true;
     public bool ShowCooldownNumerals = true;
     public bool DimUnusable = true;

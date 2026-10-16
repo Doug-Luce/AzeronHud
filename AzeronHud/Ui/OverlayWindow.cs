@@ -189,7 +189,8 @@ internal sealed class OverlayWindow : Window
         }
         else if (cfg.ShowIcons && b.IconId != 0)
         {
-            DrawIcon(draw, b, pos, size, cfg.Opacity, col.IconUnusable);
+            DrawIcon(draw, b, pos, size, cfg.Opacity, col.IconUnusable,
+                cfg.IconScale, TitleStrip(b, cell));
         }
 
         if (cfg.ShowCooldown && b.CooldownPct > 0f)
@@ -368,7 +369,10 @@ internal sealed class OverlayWindow : Window
 
         if (cfg.ShowIcons && d.IconId != 0)
         {
-            DrawIcon(draw, d, p0, new Vector2(slot), cfg.Opacity, col.IconUnusable, inset: 0.08f, fill: 0.84f);
+            // A direction slot has no label strip, so the same setting can fill
+            // more of it before it looks cramped.
+            DrawIcon(draw, d, p0, new Vector2(slot), cfg.Opacity, col.IconUnusable,
+                MathF.Min(0.96f, cfg.IconScale * 1.3f));
         }
         else
         {
@@ -424,23 +428,37 @@ internal sealed class OverlayWindow : Window
         draw.AddRect(p0, p1, Palette.Border(col, d.Tier, cfg.Opacity), rounding, ImDrawFlags.None, 1f);
     }
 
+    /// <summary>
+    /// Draw a slot's icon, centred in whatever space it has.
+    ///
+    /// <paramref name="reserveBottom"/> is the label strip at the foot of the
+    /// cell: the icon centres in the space above it rather than in the cell as
+    /// a whole, which keeps it optically centred instead of sitting low and
+    /// colliding with the text.
+    /// </summary>
     private static void DrawIcon(
         ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float opacity,
-        Vector4 unusableTint, float inset = 0.06f, float fill = 0.56f)
+        Vector4 unusableTint, float fill, float reserveBottom = 0f)
     {
         var shared = Plugin.Textures.GetFromGameIcon(new GameIconLookup(b.IconId));
         if (!shared.TryGetWrap(out var wrap, out _))
             return;
 
-        // Square icon, centred in the upper part of the cell so the label has room.
-        // A stick direction has no label strip, so it fills more of its slot.
-        var side = MathF.Min(size.X, size.Y) * fill;
-        var topLeft = new Vector2(pos.X + ((size.X - side) / 2f), pos.Y + (size.Y * inset));
+        var area = new Vector2(size.X, MathF.Max(1f, size.Y - reserveBottom));
+        var side = MathF.Min(area.X, area.Y) * fill;
+        var topLeft = pos + ((area - new Vector2(side)) / 2f);
         var tint = Palette.Of(b.Usable ? Vector4.One : unusableTint, opacity);
 
         draw.AddImage(wrap.Handle, topLeft, topLeft + new Vector2(side, side),
             Vector2.Zero, Vector2.One, tint);
     }
+
+    /// <summary>
+    /// Height of the label strip at the foot of a cell. Mirrors what
+    /// <see cref="DrawText"/> lays out, so the icon can centre above it.
+    /// </summary>
+    private float TitleStrip(ResolvedButton b, float cell) =>
+        b.Title.Length == 0 ? 0f : (cell * 0.19f) + (cell * 0.06f);
 
     /// <summary>
     /// Dark veil that drains off the top as the recast elapses.
