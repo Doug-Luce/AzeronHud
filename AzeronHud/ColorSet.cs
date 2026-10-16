@@ -41,8 +41,6 @@ public sealed class ColorSet
     public Vector4 ProcGlow = new(1.00f, 0.82f, 0.30f, 0.30f);
     public Vector4 KeyHeld = new(1.00f, 0.84f, 0.38f, 1.00f);
 
-    /// <summary>Outline on buttons answering a "where is X?" search.</summary>
-    public Vector4 SearchMatch = new(0.45f, 1.00f, 0.60f, 1.00f);
 
     /// <summary>Icon multiply color when the action can't be used.</summary>
     public Vector4 IconUnusable = new(0.55f, 0.55f, 0.55f, 1.00f);

@@ -52,8 +52,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly KeybindIndex keybinds = new();
     private readonly ButtonResolver resolver;
 
-    private readonly SearchState search = new();
-
     private ProfileStore store;
     private IReadOnlyList<AzeronProfile> discovered = Array.Empty<AzeronProfile>();
     private AzeronProfile? active;
@@ -75,9 +73,8 @@ public sealed class Plugin : IDalamudPlugin
         store = new ProfileStore(cfg.AzeronRoot);
         resolver = new ButtonResolver(keybinds);
 
-        overlay = new OverlayWindow(cfg, () => layout, () => resolver, () => statusText, search);
-        configWindow = new ConfigWindow(
-            cfg, Reload, () => discovered, () => statusText, search, () => resolver);
+        overlay = new OverlayWindow(cfg, () => layout, () => resolver, () => statusText);
+        configWindow = new ConfigWindow(cfg, Reload, () => discovered, () => statusText);
         windows.AddWindow(overlay);
         windows.AddWindow(configWindow);
 
@@ -87,7 +84,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Commands.AddHandler(Command, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the Azeron keypad HUD. Also: config, reload, lock, dump, find <text>.",
+            HelpMessage = "Toggle the Azeron keypad HUD. Also: config, reload, lock, dump.",
         });
         Commands.AddHandler(ShortCommand, new CommandInfo(OnCommand)
         {
@@ -281,21 +278,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnCommand(string command, string args)
     {
-        var trimmed = args.Trim();
-
-        // "find <text>" keeps the user's capitalisation; everything else is a
-        // bare keyword.
-        if (trimmed.StartsWith("find ", StringComparison.OrdinalIgnoreCase))
-        {
-            search.Query = trimmed[5..].Trim();
-            Chat.Print(search.Active
-                ? $"[Azeron HUD] Highlighting buttons matching \"{search.Query}\"."
-                : "[Azeron HUD] Search cleared.");
-            overlay.IsOpen = true;
-            return;
-        }
-
-        switch (trimmed.ToLowerInvariant())
+        switch (args.Trim().ToLowerInvariant())
         {
             case "":
                 ToggleOverlay();
@@ -317,11 +300,8 @@ public sealed class Plugin : IDalamudPlugin
             case "dump":
                 Dump();
                 break;
-            case "clear":
-                search.Clear();
-                break;
             default:
-                Chat.Print("[Azeron HUD] Usage: /azeronhud [config|reload|lock|dump|find <text>|clear]");
+                Chat.Print("[Azeron HUD] Usage: /azeronhud [config|reload|lock|dump]");
                 break;
         }
     }

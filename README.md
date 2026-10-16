@@ -44,17 +44,6 @@ On Linux under Wine, the prefix maps `Z:` to the filesystem root, so the default
 
 Edits you make in the Azeron app show up within a couple of seconds, with no reload.
 
-## Finding things, and checking your setup
-
-**Find** answers "which button casts this?" — type an action and the buttons that do it light up on the
-HUD. It matches the action name, the key a button sends, your own Azeron label, or the raw FFXIV keybind
-id, and a thumbstick matches if any of its directions does. `/azeronhud find <text>` does the same without
-opening settings.
-
-**Check** lists what's wrong with the loaded profile: the same key on more than one button, keys FFXIV
-does nothing with, buttons FFXIV can't see at all, and buttons with nothing assigned — the last being
-useful when you need somewhere to put something new.
-
 ## Colors
 
 Every color is editable under Settings → Colors, with a reset. Buttons are deliberately not tinted by how
@@ -70,8 +59,6 @@ color and the opacity slider multiplies on top.
 | `/azeronhud config` | Open settings |
 | `/azeronhud reload` | Re-read the profile and keybind table |
 | `/azeronhud lock` | Make the HUD inert: no mouse input, no moving, no tooltips |
-| `/azeronhud find <text>` | Light up the buttons that do that |
-| `/azeronhud clear` | Clear the search |
 | `/azeronhud dump` | Print the full resolution chain to the Dalamud log |
 
 `dump` is the thing to reach for when a button says something you don't expect: it prints every button's
