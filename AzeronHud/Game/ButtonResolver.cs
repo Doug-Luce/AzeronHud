@@ -258,6 +258,21 @@ internal sealed unsafe class ButtonResolver
     /// </summary>
     private static RaptureHotbarModule.HotbarSlot* SlotFor(RaptureHotbarModule* module, HotbarRef href)
     {
+        switch (href.Kind)
+        {
+            // HOTBAR_EX_* addresses the extra / pet bar directly.
+            case HotbarKind.Extra:
+                return module->PetHotbar.GetHotbarSlot((uint)href.Slot);
+
+            // Duty actions live outside the bars entirely. DutyActionSlot
+            // embeds a HotbarSlot, so everything downstream is unchanged.
+            case HotbarKind.DutyAction:
+            {
+                var duty = module->GetDutyActionSlot((uint)href.Slot);
+                return duty == null ? null : &duty->HotbarSlot;
+            }
+        }
+
         if (href.Bar == 0 && module->PetHotbarMode != 0)
         {
             var pet = module->PetHotbar.GetHotbarSlot((uint)href.Slot);

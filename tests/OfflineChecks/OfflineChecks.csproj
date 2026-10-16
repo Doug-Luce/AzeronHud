@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Checks for the half of the plugin that doesn't need the game: profile
+       parsing, key decoding, layout geometry and profile selection. Runs on
+       plain net10.0 against the real Azeron files, so it needs no Dalamud and
+       no Windows targeting.
+       Run with: dotnet run - -project tests/OfflineChecks (without the space)
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>AzeronHud.Tests</RootNamespace>
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DalamudLibPath Condition="'$(DalamudLibPath)' == ''">$(HOME)/.xlcore/dalamud/Hooks/dev/</DalamudLibPath>
+    <Src>$(MSBuildThisFileDirectory)../../AzeronHud/</Src>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(Src)Azeron/InputType.cs" />
+    <Compile Include="$(Src)Azeron/AzeronProfile.cs" />
+    <Compile Include="$(Src)Azeron/AzeronAppState.cs" />
+    <Compile Include="$(Src)Azeron/KeyCodeMap.cs" />
+    <Compile Include="$(Src)Azeron/ProfileStore.cs" />
+    <Compile Include="$(Src)Layout/DeviceLayout.cs" />
+    <Compile Include="Checks.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(DalamudLibPath)Newtonsoft.Json.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!-- DeviceLayout loads layouts as embedded resources; mirror the plugin's names. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(Src)Layout/cyborg2.json" LogicalName="AzeronHud.Layout.cyborg2.json" />
+  </ItemGroup>
+
+</Project>

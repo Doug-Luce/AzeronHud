@@ -101,6 +101,18 @@ export DALAMUD_HOME=~/.xlcore/dalamud/Hooks/dev
 `deploy.sh` drops the result into `~/.xlcore/devPlugins/AzeronHud`; reload it in game from
 `/xlplugins` → Dev Tools, with no restart.
 
+## Checks
+
+The half of the plugin that doesn't need the game — profile parsing, key decoding, layout geometry,
+profile selection — has checks that run against your real Azeron files:
+
+```sh
+dotnet run --project tests/OfflineChecks
+```
+
+No Dalamud, no Windows targeting, no game. Set `AZERON_ROOT` if your config lives somewhere unusual.
+These have caught four real bugs, so run them after touching anything under `Azeron/` or `Layout/`.
+
 ## Regenerating the device layout
 
 The Azeron profile JSON contains no geometry — `x`/`y` are zero on every input. The real layout is a CSS

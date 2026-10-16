@@ -158,6 +158,24 @@ contained by construction rather than by a magic factor -- a future wrong guess
 about the range saturates instead of escaping. A small deadzone swallows a
 resting stick's drift.
 
+## Three families of hotbar keybind, not one
+
+`^HOTBAR_(\d+)_([0-9AB])$` only covers 120 of the 134 slot-backed ids:
+
+| ids | where the slot lives |
+|---|---|
+| `HOTBAR_1_1` … `HOTBAR_10_B` (120) | `GetSlotById(bar, slot)` |
+| `HOTBAR_EX_0` … `HOTBAR_EX_B` (12) | `PetHotbar.GetHotbarSlot(slot)` |
+| `HOTBAR_CONTENTS_ACT_L` / `_R` (2) | `GetDutyActionSlot(index)`, whose `DutyActionSlot` embeds a `HotbarSlot` |
+
+Miss the last two families and those buttons silently fall to a lower tier — a name, no icon, no
+cooldown, no proc. The remaining 13 `HOTBAR_*` ids (`HOTBAR_SET_n`, `HOTBAR_UP`/`DOWN`) are bar-switching
+commands and correctly resolve to a name only.
+
+The EX suffixes look 0-based next to the standard bars' 1-based ones, but the two sets are identical —
+{1-9, 0, A, B} and {0-9, A, B} are the same twelve characters — so the slot mapping is shared, and '0'
+means slot ten in both.
+
 ## The pet bar replaces hotbar 1 behind GetSlotById's back
 
 While a pet bar is up the game shows pet actions on hotbar 1, but

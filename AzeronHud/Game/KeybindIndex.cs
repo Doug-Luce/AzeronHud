@@ -7,8 +7,24 @@ using FFXIVClientStructs.FFXIV.Client.UI;
 
 namespace AzeronHud.Game;
 
-/// <summary>A hotbar slot a keybind points at. Bar and slot are already zero-based.</summary>
-internal readonly record struct HotbarRef(int Bar, int Slot);
+/// <summary>Which family of hotbar a keybind points at.</summary>
+internal enum HotbarKind
+{
+    /// <summary>Hotbars 1-10.</summary>
+    Standard,
+
+    /// <summary>The extra / pet bar, addressed by HOTBAR_EX_*.</summary>
+    Extra,
+
+    /// <summary>A duty action, addressed by HOTBAR_CONTENTS_ACT_L/R.</summary>
+    DutyAction,
+}
+
+/// <summary>
+/// A hotbar slot a keybind points at. Bar and slot are already zero-based;
+/// Bar is unused for anything but <see cref="HotbarKind.Standard"/>.
+/// </summary>
+internal readonly record struct HotbarRef(HotbarKind Kind, int Bar, int Slot);
 
 /// <summary>
 /// Reverse index of FFXIV's keybind table: key chord -> what the game does.
@@ -20,6 +36,12 @@ internal readonly record struct HotbarRef(int Bar, int Slot);
 internal sealed unsafe class KeybindIndex
 {
     private static readonly Regex HotbarId = new(@"^HOTBAR_(\d+)_([0-9AB])$", RegexOptions.Compiled);
+
+    /// <summary>
+    /// The extra / pet bar. Its suffixes are the same twelve characters the
+    /// standard bars use, so the slot mapping is shared.
+    /// </summary>
+    private static readonly Regex ExtraHotbarId = new(@"^HOTBAR_EX_([0-9AB])$", RegexOptions.Compiled);
 
     private readonly Dictionary<KeyChord, List<InputId>> chords = new();
     private readonly Dictionary<InputId, string> friendlyNames = new();
@@ -171,16 +193,47 @@ internal sealed unsafe class KeybindIndex
     private static bool TryParseHotbar(InputId id, out HotbarRef href)
     {
         href = default;
+        var name = id.ToString();
 
-        var m = HotbarId.Match(id.ToString());
+        // Duty actions are their own pair of ids, not a slot on any bar.
+        switch (name)
+        {
+            case "HOTBAR_CONTENTS_ACT_L":
+                href = new HotbarRef(HotbarKind.DutyAction, 0, 0);
+                return true;
+            case "HOTBAR_CONTENTS_ACT_R":
+                href = new HotbarRef(HotbarKind.DutyAction, 0, 1);
+                return true;
+        }
+
+        var extra = ExtraHotbarId.Match(name);
+        if (extra.Success && TrySlot(extra.Groups[1].Value[0], out var exSlot))
+        {
+            href = new HotbarRef(HotbarKind.Extra, 0, exSlot);
+            return true;
+        }
+
+        var m = HotbarId.Match(name);
         if (!m.Success)
             return false;
 
         if (!int.TryParse(m.Groups[1].Value, out var bar) || bar < 1)
             return false;
 
-        var c = m.Groups[2].Value[0];
-        var slot = c switch
+        if (!TrySlot(m.Groups[2].Value[0], out var slot))
+            return false;
+
+        href = new HotbarRef(HotbarKind.Standard, bar - 1, slot);
+        return true;
+    }
+
+    /// <summary>
+    /// Slot suffix to a zero-based index. The twelve run 1-9 then 0, A, B, so
+    /// '0' is slot ten rather than slot zero.
+    /// </summary>
+    private static bool TrySlot(char c, out int slot)
+    {
+        slot = c switch
         {
             >= '1' and <= '9' => c - '1',
             '0' => 9,
@@ -189,10 +242,6 @@ internal sealed unsafe class KeybindIndex
             _ => -1,
         };
 
-        if (slot < 0)
-            return false;
-
-        href = new HotbarRef(bar - 1, slot);
-        return true;
+        return slot >= 0;
     }
 }
