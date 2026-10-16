@@ -372,14 +372,30 @@ internal sealed class OverlayWindow : Window
         }
         else
         {
-            // No icon to show, so the key itself is the most useful label.
-            var text = d.Chord.Length > 0 ? d.Chord : d.Title;
+            // Prefer what the direction does over which key it sends, but only
+            // when the name actually fits -- a direction slot is small, and a
+            // clipped "Move Forwa" is worse than a legible "W". Short names
+            // like "Jump" or "Sprint" win; long ones fall back to the key and
+            // live in the tooltip instead.
+            var scale = cell / ImGui.GetFontSize() * 0.15f;
+            var fontSize = ImGui.GetFontSize() * scale;
+            var text = d.Chord;
+
+            if (d.Title.Length > 0 && d.Title != d.Chord)
+            {
+                var titleWidth = ImGui.CalcTextSize(d.Title).X * scale;
+                if (titleWidth <= slot * 0.92f)
+                    text = d.Title;
+            }
+
+            if (text.Length == 0)
+                text = d.Title;
+
             if (text.Length > 0)
             {
-                var scale = cell / ImGui.GetFontSize() * 0.15f;
                 var extent = ImGui.CalcTextSize(text) * scale;
                 draw.PushClipRect(p0, p1, true);
-                draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
+                draw.AddText(ImGui.GetFont(), fontSize,
                     centre - (extent / 2f), Palette.Of(col.TextTitle, cfg.Opacity), text);
                 draw.PopClipRect();
             }
