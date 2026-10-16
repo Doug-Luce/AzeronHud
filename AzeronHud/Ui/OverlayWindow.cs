@@ -193,8 +193,25 @@ internal sealed class OverlayWindow : Window
         if (cfg.ShowCooldown && b.CooldownPct > 0f)
             DrawCooldown(draw, b, pos, size, cell);
 
-        if (cfg.DimUnusable && !b.Usable && b.Tier == ResolutionTier.HotbarSlot)
-            draw.AddRectFilled(pos, p1, Palette.Fade(Palette.UnusableVeil, cfg.Opacity), rounding);
+        if (b.Tier == ResolutionTier.HotbarSlot)
+        {
+            if (cfg.DimUnusable && !b.Usable)
+                draw.AddRectFilled(pos, p1, Palette.Fade(Palette.UnusableVeil, cfg.Opacity), rounding);
+
+            // Out of range is its own state: the action is fine, you just can't
+            // reach. Grey would read as "unusable", so this gets its own colour.
+            if (cfg.ShowRangeTint && !b.InRange)
+                draw.AddRectFilled(pos, p1, Palette.Fade(Palette.OutOfRangeVeil, cfg.Opacity), rounding);
+        }
+
+        var procing = cfg.ShowProcGlow && b.Highlighted && b.Tier == ResolutionTier.HotbarSlot;
+        if (procing)
+        {
+            // Inner wash plus a heavier rim, both inside the cell's clip rect.
+            draw.AddRectFilled(pos, p1, Palette.Fade(Palette.ProcGlow, cfg.Opacity), rounding);
+            draw.AddRect(pos, p1, Palette.Fade(Palette.Proc, cfg.Opacity),
+                rounding, ImDrawFlags.None, 3.5f);
+        }
 
         draw.AddRect(
             pos, p1,
@@ -233,39 +250,87 @@ internal sealed class OverlayWindow : Window
     private void DrawStick(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
     {
         var centre = pos + (size / 2f);
-        var radius = new Vector2(size.X * 0.33f, size.Y * 0.33f);
         var slot = MathF.Min(size.X, size.Y) * 0.28f;
+        var hasDirections = b.Directions is { Count: > 0 };
 
-        // This ImGui binding has AddCircle but no AddEllipse, so walk the path.
-        const int RingSegments = 48;
-        for (var i = 0; i < RingSegments; i++)
+        // Directions sit on an ellipse because the cell is a 2x2 span and taller
+        // than it is wide; a circle would either waste the height or overflow.
+        var ring = new Vector2(size.X * 0.33f, size.Y * 0.33f);
+
+        if (hasDirections)
         {
-            var a = i * MathF.Tau / RingSegments;
-            draw.PathLineTo(centre + new Vector2(MathF.Cos(a) * radius.X, MathF.Sin(a) * radius.Y));
+            foreach (var d in b.Directions!)
+            {
+                var angle = (float)d.Direction * MathF.PI / 4f;   // clockwise from north
+                var at = centre + new Vector2(MathF.Sin(angle) * ring.X, -MathF.Cos(angle) * ring.Y);
+                DrawStickDirection(draw, d, at, slot, cell);
+            }
         }
 
-        draw.PathStroke(Palette.Fade(Palette.StickRing, cfg.Opacity), ImDrawFlags.Closed, 1.5f);
+        // The stick itself, drawn the way the Azeron configurator draws it: a
+        // filled disc with a smaller knob sitting on it. With no directions
+        // around it there is room to make it the whole cell.
+        var baseRadius = hasDirections
+            ? MathF.Max(8f, MathF.Min(ring.X, ring.Y) - (slot * 0.62f))
+            : MathF.Min(size.X, size.Y) * 0.30f;
 
-        // Centre label: which stick it is, or why it can't be read.
-        if (b.Title.Length > 0)
+        var offset = StickOffset(b) * baseRadius * 0.46f;
+        var knobRadius = baseRadius * 0.42f;
+        var active = offset.LengthSquared() > 0.0001f;
+
+        draw.AddCircleFilled(centre, baseRadius, Palette.Fade(Palette.StickBase, cfg.Opacity), 32);
+        draw.AddCircle(centre, baseRadius, Palette.Fade(Palette.StickRim, cfg.Opacity), 32, 1.5f);
+        draw.AddCircleFilled(centre + offset, knobRadius,
+            Palette.Fade(active ? Palette.StickKnobActive : Palette.StickKnob, cfg.Opacity), 24);
+
+        if (b.Title.Length == 0)
+            return;
+
+        // Under the disc, or along the bottom of the cell when the ring is busy.
+        var scale = cell / ImGui.GetFontSize() * 0.17f;
+        var fontSize = ImGui.GetFontSize() * scale;
+        var extent = ImGui.CalcTextSize(b.Title) * scale;
+        var titleY = hasDirections
+            ? pos.Y + size.Y - fontSize - (cell * 0.06f)
+            : centre.Y + baseRadius + (cell * 0.08f);
+
+        draw.PushClipRect(pos, pos + size, true);
+        draw.AddText(ImGui.GetFont(), fontSize,
+            new Vector2(centre.X - (extent.X / 2f), titleY),
+            Palette.Fade(hasDirections ? Palette.Title : Palette.TitleDim, cfg.Opacity),
+            b.Title);
+        draw.PopClipRect();
+    }
+
+    /// <summary>
+    /// Where to put the knob, as a unit-ish vector. An XInput stick reports a
+    /// real axis, so use it; a key-emulating stick has no axis to read, but the
+    /// direction keys it sends are observable, so fake the deflection from
+    /// whichever are held.
+    /// </summary>
+    private static Vector2 StickOffset(ResolvedButton b)
+    {
+        if (b.Type.IsXInputStick())
         {
-            var scale = cell / ImGui.GetFontSize() * 0.17f;
-            var extent = ImGui.CalcTextSize(b.Title) * scale;
-            draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-                centre - (extent / 2f),
-                Palette.Fade(b.Directions == null ? Palette.TitleDim : Palette.Title, cfg.Opacity),
-                b.Title);
+            var axis = b.IsRightStick ? Plugin.Gamepad.RightStick : Plugin.Gamepad.LeftStick;
+            // The gamepad axis is already -1..1, with Y up.
+            return new Vector2(axis.X, -axis.Y);
         }
 
         if (b.Directions == null)
-            return;
+            return Vector2.Zero;
 
+        var sum = Vector2.Zero;
         foreach (var d in b.Directions)
         {
-            var angle = (float)d.Direction * MathF.PI / 4f;   // clockwise from north
-            var at = centre + new Vector2(MathF.Sin(angle) * radius.X, -MathF.Cos(angle) * radius.Y);
-            DrawStickDirection(draw, d, at, slot, cell);
+            if (!IsHeld(d))
+                continue;
+
+            var angle = (float)d.Direction * MathF.PI / 4f;
+            sum += new Vector2(MathF.Sin(angle), -MathF.Cos(angle));
         }
+
+        return sum.LengthSquared() > 1f ? Vector2.Normalize(sum) : sum;
     }
 
     private void DrawStickDirection(ImDrawListPtr draw, ResolvedButton d, Vector2 centre, float slot, float cell)
@@ -303,8 +368,19 @@ internal sealed class OverlayWindow : Window
                 Palette.Fade(Palette.CooldownVeil, cfg.Opacity));
         }
 
-        if (cfg.DimUnusable && !d.Usable && d.Tier == ResolutionTier.HotbarSlot)
-            draw.AddRectFilled(p0, p1, Palette.Fade(Palette.UnusableVeil, cfg.Opacity), rounding);
+        if (d.Tier == ResolutionTier.HotbarSlot)
+        {
+            if (cfg.DimUnusable && !d.Usable)
+                draw.AddRectFilled(p0, p1, Palette.Fade(Palette.UnusableVeil, cfg.Opacity), rounding);
+            if (cfg.ShowRangeTint && !d.InRange)
+                draw.AddRectFilled(p0, p1, Palette.Fade(Palette.OutOfRangeVeil, cfg.Opacity), rounding);
+        }
+
+        if (cfg.ShowProcGlow && d.Highlighted && d.Tier == ResolutionTier.HotbarSlot)
+        {
+            draw.AddRectFilled(p0, p1, Palette.Fade(Palette.ProcGlow, cfg.Opacity), rounding);
+            draw.AddRect(p0, p1, Palette.Fade(Palette.Proc, cfg.Opacity), rounding, ImDrawFlags.None, 2.5f);
+        }
 
         draw.AddRect(p0, p1, Palette.Border(d.Tier, cfg.Opacity), rounding, ImDrawFlags.None, 1f);
     }
@@ -377,6 +453,15 @@ internal sealed class OverlayWindow : Window
                 Palette.Fade(Palette.Charges, cfg.Opacity), text);
         }
 
+        if (cfg.ShowCost && b.CostText is { Length: > 0 })
+        {
+            var scale = cell / ImGui.GetFontSize() * 0.16f;
+            var extent = ImGui.CalcTextSize(b.CostText) * scale;
+            draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
+                new Vector2(pos.X + pad, pos.Y + size.Y - extent.Y - pad),
+                Palette.Fade(Palette.Cost, cfg.Opacity), b.CostText);
+        }
+
         if (b.Title.Length == 0)
             return;
 
@@ -438,8 +523,14 @@ internal sealed class OverlayWindow : Window
 
         if (b.Tier == ResolutionTier.HotbarSlot)
         {
+            if (b.Highlighted)
+                ImGui.TextUnformatted("Ready -- the game is highlighting this");
             if (!b.Usable)
                 ImGui.TextDisabled("Not usable right now");
+            if (!b.InRange)
+                ImGui.TextDisabled("Target out of range");
+            if (b.CostText is { Length: > 0 })
+                ImGui.TextDisabled($"Cost: {b.CostText}");
             if (b.CooldownSeconds > 0)
                 ImGui.TextDisabled($"Cooldown: {b.CooldownSeconds}s");
             if (b.Charges > 1)

@@ -232,6 +232,9 @@ internal sealed class ConfigWindow : Window
         Toggle("Cooldown sweep", ref cfg.ShowCooldown);
         Toggle("Cooldown seconds", ref cfg.ShowCooldownNumerals);
         Toggle("Dim unusable actions", ref cfg.DimUnusable);
+        Toggle("Highlight procs", ref cfg.ShowProcGlow);
+        Toggle("Tint when out of range", ref cfg.ShowRangeTint);
+        Toggle("MP / item cost", ref cfg.ShowCost);
         Toggle("Highlight the key being held", ref cfg.HighlightPressed);
         Toggle("Unassigned buttons", ref cfg.ShowEmptyButtons);
         Toggle("Long-press / double-press dots", ref cfg.ShowSecondaryPips);
@@ -244,6 +247,9 @@ internal sealed class ConfigWindow : Window
             cfg.ShowCooldown = d.ShowCooldown;
             cfg.ShowCooldownNumerals = d.ShowCooldownNumerals;
             cfg.DimUnusable = d.DimUnusable;
+            cfg.ShowProcGlow = d.ShowProcGlow;
+            cfg.ShowRangeTint = d.ShowRangeTint;
+            cfg.ShowCost = d.ShowCost;
             cfg.HighlightPressed = d.HighlightPressed;
             cfg.ShowEmptyButtons = d.ShowEmptyButtons;
             cfg.ShowSecondaryPips = d.ShowSecondaryPips;

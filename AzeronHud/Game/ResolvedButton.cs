@@ -48,6 +48,18 @@ internal sealed class ResolvedButton
     internal int CooldownSeconds;
     internal uint Charges;
 
+    /// <summary>The game is highlighting this action -- a proc is up.</summary>
+    internal bool Highlighted;
+
+    /// <summary>False when the target is out of range, which is distinct from unusable.</summary>
+    internal bool InRange = true;
+
+    /// <summary>MP or item count the game shows on the slot, if any.</summary>
+    internal string? CostText;
+
+    /// <summary>Change detector so the cost string is only decoded when it moves.</summary>
+    internal uint LastCostValue = uint.MaxValue;
+
     /// <summary>Set when the button also has a long-press or double-press bind.</summary>
     internal bool HasLongPress;
     internal bool HasDoublePress;
@@ -60,8 +72,11 @@ internal sealed class ResolvedButton
 
     internal InputType Type;
 
-    /// <summary>Set on a thumbstick cell, so the overlay draws it as a rose.</summary>
+    /// <summary>Set on a thumbstick cell, so the overlay draws it as a joystick.</summary>
     internal bool IsStick;
+
+    /// <summary>Which physical stick this stands in for, when it's an XInput one.</summary>
+    internal bool IsRightStick;
 
     /// <summary>Which compass point this is, when it's one of a stick's directions.</summary>
     internal StickDirection Direction = StickDirection.None;

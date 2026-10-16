@@ -39,6 +39,20 @@ internal static class Palette
     internal static readonly uint Charges = Rgba(1.00f, 0.95f, 0.70f, 1f);
     internal static readonly uint Pip = Rgba(0.70f, 0.78f, 0.90f, 0.85f);
     internal static readonly uint StickRing = Rgba(0.45f, 0.50f, 0.60f, 0.75f);
+
+    /// <summary>The joystick's base disc and the knob sitting on it.</summary>
+    internal static readonly uint StickBase = Rgba(0.20f, 0.22f, 0.27f, 1f);
+    internal static readonly uint StickRim = Rgba(0.52f, 0.57f, 0.66f, 1f);
+    internal static readonly uint StickKnob = Rgba(0.74f, 0.79f, 0.88f, 1f);
+    internal static readonly uint StickKnobActive = Rgba(1.00f, 0.84f, 0.38f, 1f);
+
+    /// <summary>A proc is up. Warm and bright, so it reads instantly.</summary>
+    internal static readonly uint Proc = Rgba(1.00f, 0.90f, 0.45f, 1f);
+    internal static readonly uint ProcGlow = Rgba(1.00f, 0.82f, 0.30f, 0.30f);
+
+    /// <summary>Out of range -- deliberately a different colour from unusable grey.</summary>
+    internal static readonly uint OutOfRangeVeil = Rgba(0.45f, 0.10f, 0.10f, 0.38f);
+    internal static readonly uint Cost = Rgba(0.68f, 0.82f, 1.00f, 1f);
     internal static readonly Vector4 IconTintUnusable = new(0.55f, 0.55f, 0.55f, 1f);
 
     /// <summary>

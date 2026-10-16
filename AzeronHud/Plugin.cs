@@ -35,6 +35,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static ITextureProvider Textures { get; private set; } = null!;
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
+    [PluginService] internal static IGamepadState Gamepad { get; private set; } = null!;
 
     private readonly Configuration cfg;
     private readonly WindowSystem windows = new("AzeronHud");

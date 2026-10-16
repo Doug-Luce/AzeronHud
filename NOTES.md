@@ -144,6 +144,39 @@ then two bare JSON numbers. Json.NET coerces them to `"0"`, which `KeyCodeMap`
 already treats as empty, but it means the DTO must be `List<string>` and not
 `List<object>`.
 
+## Mini-hotbar state comes from the slot, not from ActionManager
+
+Three calls on `HotbarSlot`, signatures confirmed against the shipped
+FFXIVClientStructs rather than guessed:
+
+```
+bool IsActionHighlighted(HotbarSlotType commandType, uint actionId)   // proc is up
+bool IsSlotActionTargetInRange()                                      // no args
+Span<byte> CostText                                                   // fixed buffer, NUL-terminated
+```
+
+`CostText` is a raw buffer, so decoding it per cell per frame would be pure
+garbage. The numeric `CostValue` on the same slot moves with it, so that is the
+change detector and the string is only rebuilt when it actually changes.
+
+Out-of-range is deliberately **not** drawn as the unusable grey. They are
+different states -- the action is fine, you just can't reach -- and sharing a
+colour would make a reachable-but-uncastable action indistinguishable from a
+castable one at the wrong distance.
+
+## The joystick is drawn the way Azeron draws it
+
+The configurator's analog representation is a styled `Circle` (filled,
+`border-radius:50%`) with a `PureDot` absolutely positioned inside it, moved by
+`transform: translate(x, y)` from the live stick reading. The HUD mirrors that:
+a filled disc, a rim, and a knob offset from centre.
+
+The knob is driven differently per mode, because the two modes expose different
+things. An XInput stick reports a real axis, so `IGamepadState.LeftStick` /
+`RightStick` drives it directly. A key-emulating stick has no axis to read at
+all -- but the keys it sends are observable through `IKeyState`, so the
+deflection is reconstructed from whichever direction keys are currently held.
+
 ## Draw-list colours don't see ImGui's style alpha
 
 `ImGuiStyleVar.Alpha` only reaches widgets that resolve their colour through

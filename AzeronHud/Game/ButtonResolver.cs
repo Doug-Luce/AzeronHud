@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using AzeronHud.Azeron;
 using AzeronHud.Layout;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
@@ -174,7 +175,9 @@ internal sealed unsafe class ButtonResolver
 
         var settings = input.AnalogSettings;
         var type = input.TypeAt(PressKind.Single);
-        var side = settings?.IsRightAnalog == true ? "Right" : "Left";
+        var isRight = settings?.IsRightAnalog == true;
+        var side = isRight ? "Right" : "Left";
+        b.IsRightStick = isRight;
 
         if (type.IsXInputStick())
         {
@@ -295,13 +298,35 @@ internal sealed unsafe class ButtonResolver
             var action = slot->ApparentActionId;
 
             cell.Usable = slot->IsSlotUsable(type, action);
+            cell.Highlighted = slot->IsActionHighlighted(type, action);
+            cell.InRange = slot->IsSlotActionTargetInRange();
 
             var seconds = 0;
             var pct = slot->GetSlotActionCooldownPercentage(&seconds);
             cell.CooldownPct = Math.Clamp(pct / 100f, 0f, 1f);
             cell.CooldownSeconds = seconds;
             cell.Charges = slot->GetApparentIconRecastCharges();
+
+            // CostText is a fixed byte buffer on the slot. Decoding it every
+            // frame for every cell would be pure garbage; the numeric CostValue
+            // moves with it, so use that as the change detector.
+            if (cell.LastCostValue != slot->CostValue)
+            {
+                cell.LastCostValue = slot->CostValue;
+                cell.CostText = ReadCostText(slot->CostText);
+            }
         }
+    }
+
+    /// <summary>Null-terminated UTF-8 out of the slot's fixed buffer.</summary>
+    private static string? ReadCostText(Span<byte> raw)
+    {
+        var end = raw.IndexOf((byte)0);
+        if (end == 0)
+            return null;
+
+        var text = Encoding.UTF8.GetString(end < 0 ? raw : raw[..end]).Trim();
+        return text.Length == 0 ? null : text;
     }
 
     /// <summary>

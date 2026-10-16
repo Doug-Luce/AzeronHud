@@ -66,6 +66,15 @@ public sealed class Configuration : IPluginConfiguration
     public bool ShowCooldown = true;
     public bool ShowCooldownNumerals = true;
     public bool DimUnusable = true;
+
+    /// <summary>Light up a button when the game is highlighting its action -- a proc.</summary>
+    public bool ShowProcGlow = true;
+
+    /// <summary>Tint a button when its target is out of range, distinctly from unusable.</summary>
+    public bool ShowRangeTint = true;
+
+    /// <summary>MP or item count in the button's corner.</summary>
+    public bool ShowCost = true;
     public bool ShowEmptyButtons = true;
     public bool ShowSecondaryPips = true;
 
