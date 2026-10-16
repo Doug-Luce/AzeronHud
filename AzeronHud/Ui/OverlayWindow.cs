@@ -19,6 +19,7 @@ namespace AzeronHud.Ui;
 /// </summary>
 internal sealed class OverlayWindow : Window
 {
+
     private readonly Configuration cfg;
     private readonly Func<DeviceLayout?> layout;
     private readonly Func<ButtonResolver> resolver;
@@ -170,6 +171,7 @@ internal sealed class OverlayWindow : Window
 
     private void DrawButton(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
     {
+        var col = cfg.Colors;
         var p1 = pos + size;
         var rounding = cfg.Rounding * ImGuiHelpers.GlobalScale;
         var pressed = cfg.HighlightPressed && IsHeld(b);
@@ -179,7 +181,7 @@ internal sealed class OverlayWindow : Window
         draw.PushClipRect(pos, p1, true);
 
         if (cfg.ShowButtonPanels)
-            draw.AddRectFilled(pos, p1, Palette.Background(b.Tier, cfg.Opacity), rounding);
+            draw.AddRectFilled(pos, p1, Palette.Panel(col, b.IsStick ? Palette.StickTier : b.Tier, cfg.Opacity), rounding);
 
         if (b.IsStick)
         {
@@ -187,7 +189,7 @@ internal sealed class OverlayWindow : Window
         }
         else if (cfg.ShowIcons && b.IconId != 0)
         {
-            DrawIcon(draw, b, pos, size, cfg.Opacity);
+            DrawIcon(draw, b, pos, size, cfg.Opacity, col.IconUnusable);
         }
 
         if (cfg.ShowCooldown && b.CooldownPct > 0f)
@@ -196,35 +198,35 @@ internal sealed class OverlayWindow : Window
         if (b.Tier == ResolutionTier.HotbarSlot)
         {
             if (cfg.DimUnusable && !b.Usable)
-                draw.AddRectFilled(pos, p1, Palette.Fade(Palette.UnusableVeil, cfg.Opacity), rounding);
+                draw.AddRectFilled(pos, p1, Palette.Of(col.Unusable, cfg.Opacity), rounding);
 
             // Out of range is its own state: the action is fine, you just can't
             // reach. Grey would read as "unusable", so this gets its own colour.
             if (cfg.ShowRangeTint && !b.InRange)
-                draw.AddRectFilled(pos, p1, Palette.Fade(Palette.OutOfRangeVeil, cfg.Opacity), rounding);
+                draw.AddRectFilled(pos, p1, Palette.Of(col.OutOfRange, cfg.Opacity), rounding);
         }
 
         var procing = cfg.ShowProcGlow && b.Highlighted && b.Tier == ResolutionTier.HotbarSlot;
         if (procing)
         {
             // Inner wash plus a heavier rim, both inside the cell's clip rect.
-            draw.AddRectFilled(pos, p1, Palette.Fade(Palette.ProcGlow, cfg.Opacity), rounding);
-            draw.AddRect(pos, p1, Palette.Fade(Palette.Proc, cfg.Opacity),
+            draw.AddRectFilled(pos, p1, Palette.Of(col.ProcGlow, cfg.Opacity), rounding);
+            draw.AddRect(pos, p1, Palette.Of(col.Proc, cfg.Opacity),
                 rounding, ImDrawFlags.None, 3.5f);
         }
 
         draw.AddRect(
             pos, p1,
             pressed
-                ? Palette.Fade(Palette.Pressed, cfg.Opacity)
-                : Palette.Border(b.Tier, cfg.Opacity),
+                ? Palette.Of(col.KeyHeld, cfg.Opacity)
+                : Palette.Border(col, b.IsStick ? Palette.StickTier : b.Tier, cfg.Opacity),
             rounding, ImDrawFlags.None, pressed ? 2.5f : 1.5f);
 
         if (!b.IsStick)
             DrawText(draw, b, pos, size, cell);
 
         if (cfg.ShowSecondaryPips && (b.HasLongPress || b.HasDoublePress))
-            DrawPips(draw, b, pos, size, cell, cfg.Opacity);
+            DrawPips(draw, b, pos, size, cell, cfg.Opacity, col.Pip);
 
         draw.PopClipRect();
 
@@ -249,6 +251,7 @@ internal sealed class OverlayWindow : Window
     /// </summary>
     private void DrawStick(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
     {
+        var col = cfg.Colors;
         var centre = pos + (size / 2f);
         var slot = MathF.Min(size.X, size.Y) * 0.28f;
         var hasDirections = b.Directions is { Count: > 0 };
@@ -278,10 +281,10 @@ internal sealed class OverlayWindow : Window
         var knobRadius = baseRadius * 0.42f;
         var active = offset.LengthSquared() > 0.0001f;
 
-        draw.AddCircleFilled(centre, baseRadius, Palette.Fade(Palette.StickBase, cfg.Opacity), 32);
-        draw.AddCircle(centre, baseRadius, Palette.Fade(Palette.StickRim, cfg.Opacity), 32, 1.5f);
+        draw.AddCircleFilled(centre, baseRadius, Palette.Of(col.StickBase, cfg.Opacity), 32);
+        draw.AddCircle(centre, baseRadius, Palette.Of(col.StickRim, cfg.Opacity), 32, 1.5f);
         draw.AddCircleFilled(centre + offset, knobRadius,
-            Palette.Fade(active ? Palette.StickKnobActive : Palette.StickKnob, cfg.Opacity), 24);
+            Palette.Of(active ? col.StickKnobActive : col.StickKnob, cfg.Opacity), 24);
 
         if (b.Title.Length == 0)
             return;
@@ -297,7 +300,7 @@ internal sealed class OverlayWindow : Window
         draw.PushClipRect(pos, pos + size, true);
         draw.AddText(ImGui.GetFont(), fontSize,
             new Vector2(centre.X - (extent.X / 2f), titleY),
-            Palette.Fade(hasDirections ? Palette.Title : Palette.TitleDim, cfg.Opacity),
+            Palette.Of(hasDirections ? col.TextTitle : col.TextTitleDim, cfg.Opacity),
             b.Title);
         draw.PopClipRect();
     }
@@ -335,17 +338,18 @@ internal sealed class OverlayWindow : Window
 
     private void DrawStickDirection(ImDrawListPtr draw, ResolvedButton d, Vector2 centre, float slot, float cell)
     {
+        var col = cfg.Colors;
         var half = new Vector2(slot / 2f);
         var p0 = centre - half;
         var p1 = centre + half;
         var rounding = slot * 0.18f;
 
         if (cfg.ShowButtonPanels)
-            draw.AddRectFilled(p0, p1, Palette.Background(d.Tier, cfg.Opacity), rounding);
+            draw.AddRectFilled(p0, p1, Palette.Panel(col, d.Tier, cfg.Opacity), rounding);
 
         if (cfg.ShowIcons && d.IconId != 0)
         {
-            DrawIcon(draw, d, p0, new Vector2(slot), cfg.Opacity, inset: 0.08f, fill: 0.84f);
+            DrawIcon(draw, d, p0, new Vector2(slot), cfg.Opacity, col.IconUnusable, inset: 0.08f, fill: 0.84f);
         }
         else
         {
@@ -357,7 +361,7 @@ internal sealed class OverlayWindow : Window
                 var extent = ImGui.CalcTextSize(text) * scale;
                 draw.PushClipRect(p0, p1, true);
                 draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-                    centre - (extent / 2f), Palette.Fade(Palette.Title, cfg.Opacity), text);
+                    centre - (extent / 2f), Palette.Of(col.TextTitle, cfg.Opacity), text);
                 draw.PopClipRect();
             }
         }
@@ -365,29 +369,29 @@ internal sealed class OverlayWindow : Window
         if (cfg.ShowCooldown && d.CooldownPct > 0f)
         {
             draw.AddRectFilled(p0, new Vector2(p1.X, p0.Y + (slot * d.CooldownPct)),
-                Palette.Fade(Palette.CooldownVeil, cfg.Opacity));
+                Palette.Of(col.Cooldown, cfg.Opacity));
         }
 
         if (d.Tier == ResolutionTier.HotbarSlot)
         {
             if (cfg.DimUnusable && !d.Usable)
-                draw.AddRectFilled(p0, p1, Palette.Fade(Palette.UnusableVeil, cfg.Opacity), rounding);
+                draw.AddRectFilled(p0, p1, Palette.Of(col.Unusable, cfg.Opacity), rounding);
             if (cfg.ShowRangeTint && !d.InRange)
-                draw.AddRectFilled(p0, p1, Palette.Fade(Palette.OutOfRangeVeil, cfg.Opacity), rounding);
+                draw.AddRectFilled(p0, p1, Palette.Of(col.OutOfRange, cfg.Opacity), rounding);
         }
 
         if (cfg.ShowProcGlow && d.Highlighted && d.Tier == ResolutionTier.HotbarSlot)
         {
-            draw.AddRectFilled(p0, p1, Palette.Fade(Palette.ProcGlow, cfg.Opacity), rounding);
-            draw.AddRect(p0, p1, Palette.Fade(Palette.Proc, cfg.Opacity), rounding, ImDrawFlags.None, 2.5f);
+            draw.AddRectFilled(p0, p1, Palette.Of(col.ProcGlow, cfg.Opacity), rounding);
+            draw.AddRect(p0, p1, Palette.Of(col.Proc, cfg.Opacity), rounding, ImDrawFlags.None, 2.5f);
         }
 
-        draw.AddRect(p0, p1, Palette.Border(d.Tier, cfg.Opacity), rounding, ImDrawFlags.None, 1f);
+        draw.AddRect(p0, p1, Palette.Border(col, d.Tier, cfg.Opacity), rounding, ImDrawFlags.None, 1f);
     }
 
     private static void DrawIcon(
         ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float opacity,
-        float inset = 0.06f, float fill = 0.56f)
+        Vector4 unusableTint, float inset = 0.06f, float fill = 0.56f)
     {
         var shared = Plugin.Textures.GetFromGameIcon(new GameIconLookup(b.IconId));
         if (!shared.TryGetWrap(out var wrap, out _))
@@ -397,9 +401,7 @@ internal sealed class OverlayWindow : Window
         // A stick direction has no label strip, so it fills more of its slot.
         var side = MathF.Min(size.X, size.Y) * fill;
         var topLeft = new Vector2(pos.X + ((size.X - side) / 2f), pos.Y + (size.Y * inset));
-        var tint = Palette.Fade(
-            b.Usable ? 0xFFFFFFFFu : ImGui.ColorConvertFloat4ToU32(Palette.IconTintUnusable),
-            opacity);
+        var tint = Palette.Of(b.Usable ? Vector4.One : unusableTint, opacity);
 
         draw.AddImage(wrap.Handle, topLeft, topLeft + new Vector2(side, side),
             Vector2.Zero, Vector2.One, tint);
@@ -415,10 +417,11 @@ internal sealed class OverlayWindow : Window
     /// </summary>
     private void DrawCooldown(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
     {
+        var col = cfg.Colors;
         draw.AddRectFilled(
             pos,
             new Vector2(pos.X + size.X, pos.Y + (size.Y * b.CooldownPct)),
-            Palette.Fade(Palette.CooldownVeil, cfg.Opacity));
+            Palette.Of(col.Cooldown, cfg.Opacity));
 
         if (!cfg.ShowCooldownNumerals || b.CooldownSeconds <= 0)
             return;
@@ -429,18 +432,19 @@ internal sealed class OverlayWindow : Window
         var scale = cell / ImGui.GetFontSize() * 0.34f;
         var extent = ImGui.CalcTextSize(text) * scale;
         draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-            centre - (extent / 2f), Palette.Fade(Palette.Title, cfg.Opacity), text);
+            centre - (extent / 2f), Palette.Of(col.TextTitle, cfg.Opacity), text);
     }
 
     private void DrawText(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
     {
+        var col = cfg.Colors;
         var pad = cell * 0.06f;
 
         if (cfg.ShowChord && b.Chord.Length > 0)
         {
             var scale = cell / ImGui.GetFontSize() * 0.17f;
             draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
-                pos + new Vector2(pad, pad), Palette.Fade(Palette.Chord, cfg.Opacity), b.Chord);
+                pos + new Vector2(pad, pad), Palette.Of(col.TextKey, cfg.Opacity), b.Chord);
         }
 
         if (b.Charges > 1)
@@ -450,7 +454,7 @@ internal sealed class OverlayWindow : Window
             var extent = ImGui.CalcTextSize(text) * scale;
             draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
                 new Vector2(pos.X + size.X - extent.X - pad, pos.Y + pad),
-                Palette.Fade(Palette.Charges, cfg.Opacity), text);
+                Palette.Of(col.TextCharges, cfg.Opacity), text);
         }
 
         if (cfg.ShowCost && b.CostText is { Length: > 0 })
@@ -459,7 +463,7 @@ internal sealed class OverlayWindow : Window
             var extent = ImGui.CalcTextSize(b.CostText) * scale;
             draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
                 new Vector2(pos.X + pad, pos.Y + size.Y - extent.Y - pad),
-                Palette.Fade(Palette.Cost, cfg.Opacity), b.CostText);
+                Palette.Of(col.TextCost, cfg.Opacity), b.CostText);
         }
 
         if (b.Title.Length == 0)
@@ -476,15 +480,15 @@ internal sealed class OverlayWindow : Window
 
         draw.PushClipRect(pos + new Vector2(pad * 0.5f, 0), pos + size - new Vector2(pad * 0.5f, 0), true);
         draw.AddText(ImGui.GetFont(), titleSize, titlePos,
-            Palette.Fade(
-                b.Tier is ResolutionTier.Empty or ResolutionTier.RawKey ? Palette.TitleDim : Palette.Title,
+            Palette.Of(
+                b.Tier is ResolutionTier.Empty or ResolutionTier.RawKey ? col.TextTitleDim : col.TextTitle,
                 cfg.Opacity),
             b.Title);
         draw.PopClipRect();
     }
 
     /// <summary>One dot for a long-press bind, two for a double-press.</summary>
-    private static void DrawPips(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell, float opacity)
+    private static void DrawPips(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell, float opacity, Vector4 pip)
     {
         var r = cell * 0.035f;
         var y = pos.Y + size.Y - (r * 2.2f);
@@ -492,14 +496,14 @@ internal sealed class OverlayWindow : Window
 
         if (b.HasLongPress)
         {
-            draw.AddCircleFilled(new Vector2(x, y), r, Palette.Fade(Palette.Pip, opacity));
+            draw.AddCircleFilled(new Vector2(x, y), r, Palette.Of(pip, opacity));
             x -= r * 2.6f;
         }
 
         if (b.HasDoublePress)
         {
-            draw.AddCircleFilled(new Vector2(x, y), r, Palette.Fade(Palette.Pip, opacity));
-            draw.AddCircleFilled(new Vector2(x - (r * 2.6f), y), r, Palette.Fade(Palette.Pip, opacity));
+            draw.AddCircleFilled(new Vector2(x, y), r, Palette.Of(pip, opacity));
+            draw.AddCircleFilled(new Vector2(x - (r * 2.6f), y), r, Palette.Of(pip, opacity));
         }
     }
 

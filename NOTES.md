@@ -177,6 +177,28 @@ things. An XInput stick reports a real axis, so `IGamepadState.LeftStick` /
 all -- but the keys it sends are observable through `IKeyState`, so the
 deflection is reconstructed from whichever direction keys are currently held.
 
+## The thumbstick is not a fault
+
+Tier colour carries meaning: amber means "assigned to something FFXIV cannot
+report", which is usually a mistake worth noticing. The Windows key earns it --
+FFXIV genuinely cannot bind it, so that button does nothing in game.
+
+An XInput thumbstick does *not*. It is a perfectly good setup that simply is
+not expressible as a keybind, so it gets its own panel and border colour via a
+pseudo-tier (`Palette.StickTier`) rather than borrowing the amber. It still
+carries the explanatory tooltip.
+
+## Colours are all user-editable
+
+Every colour lives in `ColorSet`, serialized with the config. Alpha is part of
+each colour and the HUD's opacity multiplies on top, so a veil at 0.6 alpha
+stays proportionally lighter as the whole HUD fades -- which is why none of the
+tier helpers apply their own alpha multipliers any more.
+
+`ImGui.ColorEdit4` fires every frame of a drag, so the save is gated on
+`IsItemDeactivatedAfterEdit()`; saving per frame would rewrite the config file
+continuously while the user drags a picker.
+
 ## Draw-list colours don't see ImGui's style alpha
 
 `ImGuiStyleVar.Alpha` only reaches widgets that resolve their colour through

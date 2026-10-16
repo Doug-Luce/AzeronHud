@@ -6,67 +6,36 @@ using Dalamud.Bindings.ImGui;
 namespace AzeronHud.Ui;
 
 /// <summary>
-/// Colours for the overlay. The configurator's own palette is themeable and
-/// light-leaning; a HUD sitting over the game wants something darker and
-/// quieter, so these are our own, keyed off resolution tier so you can tell at
-/// a glance which buttons the plugin actually understood.
+/// Turns the configured colours into what the draw list wants.
+///
+/// Raw ImDrawList calls take an explicit packed colour and never see ImGui's
+/// style alpha, so the HUD's overall opacity has to be multiplied in here --
+/// otherwise the panels fade and the icons and text stay solid.
 /// </summary>
 internal static class Palette
 {
-    internal static uint Background(ResolutionTier tier, float alpha) => tier switch
+    /// <summary>Pack a configured colour, scaled by the HUD's opacity.</summary>
+    internal static uint Of(Vector4 c, float opacity) =>
+        ImGui.ColorConvertFloat4ToU32(c with { W = Math.Clamp(c.W * opacity, 0f, 1f) });
+
+    /// <summary>Pseudo-tier the overlay uses for the thumbstick's own panel colour.</summary>
+    internal const ResolutionTier StickTier = (ResolutionTier)100;
+
+    internal static uint Panel(ColorSet c, ResolutionTier tier, float opacity) => Of(tier switch
     {
-        ResolutionTier.HotbarSlot => Rgba(0.13f, 0.15f, 0.19f, alpha),
-        ResolutionTier.Keybind => Rgba(0.12f, 0.17f, 0.22f, alpha),
-        ResolutionTier.RawKey => Rgba(0.14f, 0.14f, 0.15f, alpha * 0.9f),
-        ResolutionTier.Unbindable => Rgba(0.22f, 0.17f, 0.09f, alpha * 0.9f),
-        _ => Rgba(0.10f, 0.10f, 0.11f, alpha * 0.55f),
-    };
+        StickTier => c.PanelStick,
+        ResolutionTier.HotbarSlot => c.PanelHotbar,
+        ResolutionTier.Keybind => c.PanelKeybind,
+        ResolutionTier.RawKey => c.PanelRawKey,
+        ResolutionTier.Unbindable => c.PanelUnresolvable,
+        _ => c.PanelEmpty,
+    }, opacity);
 
-    internal static uint Border(ResolutionTier tier, float alpha) => tier switch
+    internal static uint Border(ColorSet c, ResolutionTier tier, float opacity) => Of(tier switch
     {
-        ResolutionTier.HotbarSlot => Rgba(0.42f, 0.47f, 0.56f, alpha),
-        ResolutionTier.Keybind => Rgba(0.33f, 0.47f, 0.60f, alpha),
-        ResolutionTier.Unbindable => Rgba(0.60f, 0.47f, 0.22f, alpha),
-        _ => Rgba(0.28f, 0.28f, 0.31f, alpha * 0.8f),
-    };
-
-    internal static readonly uint Title = Rgba(0.93f, 0.93f, 0.95f, 1f);
-    internal static readonly uint TitleDim = Rgba(0.58f, 0.58f, 0.62f, 1f);
-    internal static readonly uint Chord = Rgba(0.62f, 0.72f, 0.86f, 1f);
-    internal static readonly uint Pressed = Rgba(1.00f, 0.84f, 0.38f, 1f);
-    internal static readonly uint CooldownVeil = Rgba(0f, 0f, 0f, 0.62f);
-    internal static readonly uint UnusableVeil = Rgba(0f, 0f, 0f, 0.45f);
-    internal static readonly uint Charges = Rgba(1.00f, 0.95f, 0.70f, 1f);
-    internal static readonly uint Pip = Rgba(0.70f, 0.78f, 0.90f, 0.85f);
-    internal static readonly uint StickRing = Rgba(0.45f, 0.50f, 0.60f, 0.75f);
-
-    /// <summary>The joystick's base disc and the knob sitting on it.</summary>
-    internal static readonly uint StickBase = Rgba(0.20f, 0.22f, 0.27f, 1f);
-    internal static readonly uint StickRim = Rgba(0.52f, 0.57f, 0.66f, 1f);
-    internal static readonly uint StickKnob = Rgba(0.74f, 0.79f, 0.88f, 1f);
-    internal static readonly uint StickKnobActive = Rgba(1.00f, 0.84f, 0.38f, 1f);
-
-    /// <summary>A proc is up. Warm and bright, so it reads instantly.</summary>
-    internal static readonly uint Proc = Rgba(1.00f, 0.90f, 0.45f, 1f);
-    internal static readonly uint ProcGlow = Rgba(1.00f, 0.82f, 0.30f, 0.30f);
-
-    /// <summary>Out of range -- deliberately a different colour from unusable grey.</summary>
-    internal static readonly uint OutOfRangeVeil = Rgba(0.45f, 0.10f, 0.10f, 0.38f);
-    internal static readonly uint Cost = Rgba(0.68f, 0.82f, 1.00f, 1f);
-    internal static readonly Vector4 IconTintUnusable = new(0.55f, 0.55f, 0.55f, 1f);
-
-    /// <summary>
-    /// Scale a packed colour's alpha. Raw draw-list calls take an explicit
-    /// colour, so ImGui's own style alpha doesn't reach them -- the HUD's
-    /// opacity has to be folded in by hand or icons and text stay solid while
-    /// the panels fade.
-    /// </summary>
-    internal static uint Fade(uint col, float a)
-    {
-        var alpha = (uint)Math.Clamp(((col >> 24) & 0xFF) * a, 0f, 255f);
-        return (col & 0x00FFFFFF) | (alpha << 24);
-    }
-
-    private static uint Rgba(float r, float g, float b, float a) =>
-        ImGui.ColorConvertFloat4ToU32(new Vector4(r, g, b, a));
+        ResolutionTier.HotbarSlot => c.BorderHotbar,
+        ResolutionTier.Keybind => c.BorderKeybind,
+        ResolutionTier.Unbindable => c.BorderUnresolvable,
+        _ => c.BorderOther,
+    }, opacity);
 }

@@ -44,6 +44,13 @@ On Linux under Wine, the prefix maps `Z:` to the filesystem root, so the default
 
 Edits you make in the Azeron app show up within a couple of seconds, with no reload.
 
+## Colours
+
+Every colour is editable under Settings → Colours, with a reset per section. The palette is meaningful
+rather than decorative: panel colour tells you how far the plugin got — resolved to a hotbar action, to
+some other keybind, to a key FFXIV doesn't bind, or not readable at all. Alpha is part of each colour and
+the opacity slider multiplies on top.
+
 ## Commands
 
 | Command | What it does |

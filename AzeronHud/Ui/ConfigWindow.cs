@@ -49,6 +49,7 @@ internal sealed class ConfigWindow : Window
         DrawProfileTab();
         DrawAppearanceTab();
         DrawContentTab();
+        DrawColorsTab();
         DrawToggleTab();
     }
 
@@ -256,6 +257,83 @@ internal sealed class ConfigWindow : Window
         });
 
         ImGui.EndTabItem();
+    }
+
+    private void DrawColorsTab()
+    {
+        if (!ImGui.BeginTabItem("Colours"))
+            return;
+
+        ImGui.TextWrapped(
+            "Alpha is part of each colour. The opacity slider on the Appearance tab multiplies on "
+            + "top, so veils stay proportional as the whole HUD fades.");
+        ImGui.Spacing();
+
+        var c = cfg.Colors;
+
+        if (ImGui.CollapsingHeader("Buttons", ImGuiTreeNodeFlags.DefaultOpen))
+        {
+            ImGui.TextDisabled("Panels, by how much the plugin could work out.");
+            Color("Bound to a hotbar slot", ref c.PanelHotbar);
+            Color("Bound to another keybind", ref c.PanelKeybind);
+            Color("Key FFXIV doesn't bind", ref c.PanelRawKey);
+            Color("Can't be read by FFXIV", ref c.PanelUnresolvable);
+            Color("Nothing assigned", ref c.PanelEmpty);
+            Color("Thumbstick", ref c.PanelStick);
+
+            ImGui.Spacing();
+            ImGui.TextDisabled("Outlines.");
+            Color("Hotbar outline", ref c.BorderHotbar);
+            Color("Keybind outline", ref c.BorderKeybind);
+            Color("Unreadable outline", ref c.BorderUnresolvable);
+            Color("Other outline", ref c.BorderOther);
+        }
+
+        if (ImGui.CollapsingHeader("States"))
+        {
+            Color("Cooldown", ref c.Cooldown);
+            Color("Unusable", ref c.Unusable);
+            Color("Unusable icon tint", ref c.IconUnusable);
+            Color("Out of range", ref c.OutOfRange);
+            Color("Proc outline", ref c.Proc);
+            Color("Proc wash", ref c.ProcGlow);
+            Color("Key held", ref c.KeyHeld);
+        }
+
+        if (ImGui.CollapsingHeader("Text"))
+        {
+            Color("Action name", ref c.TextTitle);
+            Color("Action name, unresolved", ref c.TextTitleDim);
+            Color("Key", ref c.TextKey);
+            Color("Cost", ref c.TextCost);
+            Color("Charges", ref c.TextCharges);
+            Color("Long/double-press dots", ref c.Pip);
+        }
+
+        if (ImGui.CollapsingHeader("Thumbstick"))
+        {
+            Color("Disc", ref c.StickBase);
+            Color("Rim", ref c.StickRim);
+            Color("Knob", ref c.StickKnob);
+            Color("Knob, deflected", ref c.StickKnobActive);
+        }
+
+        ResetButton("colours", () => cfg.Colors = new ColorSet());
+
+        ImGui.EndTabItem();
+    }
+
+    /// <summary>
+    /// A colour row. Saving happens when the picker is released rather than on
+    /// every frame of a drag, which would rewrite the config file continuously.
+    /// </summary>
+    private void Color(string label, ref Vector4 value)
+    {
+        ImGui.ColorEdit4(label, ref value,
+            ImGuiColorEditFlags.AlphaBar | ImGuiColorEditFlags.AlphaPreviewHalf);
+
+        if (ImGui.IsItemDeactivatedAfterEdit())
+            cfg.Save();
     }
 
     private void DrawToggleTab()
