@@ -5,20 +5,23 @@ same layout as the Azeron configurator, with every button labelled by what it ac
 
 Each button shows, in order of preference:
 
-1. the **hotbar action's icon and name**, when the key is bound to a hotbar slot — with the real cooldown
-   sweep, charge count, and dimming when the action isn't usable;
+1. the **hotbar action's icon and name**, when the key is bound to a hotbar slot — with the real cooldown,
+   charge count and MP cost, a highlight when a proc is up, dimming when the action isn't usable, and a
+   separate tint when the target is out of range;
 2. the **FFXIV keybind's name** ("Turn On/Off Auto-run", "Move Forward"), when it's bound to something
    that isn't a hotbar slot;
 3. your own **Azeron label**, if you set one in the Azeron app;
 4. the **raw key** otherwise.
 
-The **thumbstick** is drawn as a compass rose. If it's set to emulate keys, each live direction resolves
-like any other button -- icon, name and cooldown -- and the diagonals appear only when eight-directional
-mode is on. If it's set to XInput, the game sees a gamepad axis rather than a keystroke, so the HUD says
-which stick it is instead of guessing at a binding.
+The **thumbstick** is drawn the way the Azeron configurator draws it — a disc with a knob on it — and the
+knob moves: from the real gamepad axis when the stick is on XInput, or from whichever direction keys are
+held when it emulates keys. In key-emulating mode each live direction is placed around the disc and
+resolves like any other button, with the diagonals appearing only when eight-directional mode is on. On
+XInput the game sees a gamepad axis rather than a keystroke, so the HUD names the stick instead of
+guessing at a binding.
 
-Buttons the game can't see — mouse clicks, XInput, macros, the scroll wheel, the thumbstick — are tinted
-and say so, rather than silently going blank.
+Buttons the game can't see — mouse clicks, XInput, macros, the scroll wheel — are tinted and say so,
+rather than silently going blank.
 
 Hidden by default. Toggle it with `/azeronhud` (or `/azhud`), or bind a key in the settings.
 
