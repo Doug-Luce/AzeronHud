@@ -242,6 +242,27 @@ internal sealed unsafe class ButtonResolver
         b.UnbindableReason = null;
     }
 
+    /// <summary>
+    /// The slot a hotbar reference actually points at right now.
+    ///
+    /// While a pet bar is up the game shows pet actions on hotbar 1, but
+    /// GetSlotById still returns the standard slot -- so the HUD would keep
+    /// showing the job actions hidden underneath. Fall back to the standard
+    /// slot when the pet slot is empty, so a misread of PetHotbarMode can only
+    /// ever cost us the pet reading, never the normal one.
+    /// </summary>
+    private static RaptureHotbarModule.HotbarSlot* SlotFor(RaptureHotbarModule* module, HotbarRef href)
+    {
+        if (href.Bar == 0 && module->PetHotbarMode != 0)
+        {
+            var pet = module->PetHotbar.GetHotbarSlot((uint)href.Slot);
+            if (pet != null && !pet->IsEmpty)
+                return pet;
+        }
+
+        return module->GetSlotById((uint)href.Bar, (uint)href.Slot);
+    }
+
     /// <summary>Read a hotbar slot's icon and name. False when the slot is empty.</summary>
     private static bool FillFromHotbar(ResolvedButton b, HotbarRef href)
     {
@@ -249,7 +270,7 @@ internal sealed unsafe class ButtonResolver
         if (module == null)
             return false;
 
-        var slot = module->GetSlotById((uint)href.Bar, (uint)href.Slot);
+        var slot = SlotFor(module, href);
         if (slot == null || slot->IsEmpty)
             return false;
 
@@ -287,7 +308,7 @@ internal sealed unsafe class ButtonResolver
 
         foreach (var (cell, href) in hotbarBacked)
         {
-            var slot = module->GetSlotById((uint)href.Bar, (uint)href.Slot);
+            var slot = SlotFor(module, href);
             if (slot == null || slot->IsEmpty)
             {
                 cell.Usable = false;
@@ -346,7 +367,7 @@ internal sealed unsafe class ButtonResolver
 
         foreach (var (cell, href) in hotbarBacked)
         {
-            var slot = module->GetSlotById((uint)href.Bar, (uint)href.Slot);
+            var slot = SlotFor(module, href);
             if (slot == null)
                 continue;
 

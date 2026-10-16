@@ -158,6 +158,22 @@ contained by construction rather than by a magic factor -- a future wrong guess
 about the range saturates instead of escaping. A small deadzone swallows a
 resting stick's drift.
 
+## The pet bar replaces hotbar 1 behind GetSlotById's back
+
+While a pet bar is up the game shows pet actions on hotbar 1, but
+`GetSlotById(0, n)` still returns the standard slot -- so the HUD would keep
+showing the job actions hidden underneath it.
+
+`RaptureHotbarModule.PetHotbarMode` (a `uint`) is the switch and
+`PetHotbar.GetHotbarSlot(n)` the replacement. The exact meaning of nonzero
+values is not documented, so `SlotFor` falls back to the standard slot whenever
+the pet slot is empty: a misread of `PetHotbarMode` can then only ever cost us
+the pet reading, never the normal one. Check it with `/azeronhud dump` while a
+pet bar is actually up.
+
+Note `PetHotbarActive` exists in the binary but is **not** on
+`RaptureHotbarModule` -- don't reach for it there.
+
 ## Mini-hotbar state comes from the slot, not from ActionManager
 
 Three calls on `HotbarSlot`, signatures confirmed against the shipped

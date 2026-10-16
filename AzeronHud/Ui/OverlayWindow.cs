@@ -24,18 +24,21 @@ internal sealed class OverlayWindow : Window
     private readonly Func<DeviceLayout?> layout;
     private readonly Func<ButtonResolver> resolver;
     private readonly Func<string?> statusLine;
+    private readonly SearchState search;
 
     internal OverlayWindow(
         Configuration cfg,
         Func<DeviceLayout?> layout,
         Func<ButtonResolver> resolver,
-        Func<string?> statusLine)
+        Func<string?> statusLine,
+        SearchState search)
         : base("Azeron HUD##AzeronHudOverlay")
     {
         this.cfg = cfg;
         this.layout = layout;
         this.resolver = resolver;
         this.statusLine = statusLine;
+        this.search = search;
 
         // Esc belongs to the game while this is up, and it must stay on the
         // main viewport -- this install runs with IsDisableViewport set.
@@ -216,12 +219,16 @@ internal sealed class OverlayWindow : Window
                 rounding, ImDrawFlags.None, 3.5f);
         }
 
+        // A search hit outranks the held-key highlight: you went looking for
+        // this button, so it should be the thing that stands out.
+        var found = search.Matches(b);
+
         draw.AddRect(
             pos, p1,
-            pressed
-                ? Palette.Of(col.KeyHeld, cfg.Opacity)
+            found ? Palette.Of(col.SearchMatch, cfg.Opacity)
+                : pressed ? Palette.Of(col.KeyHeld, cfg.Opacity)
                 : Palette.Border(col, b.Tier, cfg.Opacity),
-            rounding, ImDrawFlags.None, pressed ? 2.5f : 1.5f);
+            rounding, ImDrawFlags.None, found ? 3.5f : pressed ? 2.5f : 1.5f);
 
         if (!b.IsStick)
             DrawText(draw, b, pos, size, cell);

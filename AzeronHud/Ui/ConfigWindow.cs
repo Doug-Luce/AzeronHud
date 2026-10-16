@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using AzeronHud.Azeron;
+using AzeronHud.Game;
+using System.Linq;
 using AzeronHud.Layout;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Keys;
@@ -16,6 +18,8 @@ internal sealed class ConfigWindow : Window
     private readonly Action reload;
     private readonly Func<IReadOnlyList<AzeronProfile>> profiles;
     private readonly Func<string> status;
+    private readonly SearchState search;
+    private readonly Func<ButtonResolver> resolver;
 
     private bool capturingHotkey;
 
@@ -26,13 +30,17 @@ internal sealed class ConfigWindow : Window
         Configuration cfg,
         Action reload,
         Func<IReadOnlyList<AzeronProfile>> profiles,
-        Func<string> status)
+        Func<string> status,
+        SearchState search,
+        Func<ButtonResolver> resolver)
         : base("Azeron HUD settings###AzeronHudConfig")
     {
         this.cfg = cfg;
         this.reload = reload;
         this.profiles = profiles;
         this.status = status;
+        this.search = search;
+        this.resolver = resolver;
 
         Size = new Vector2(460, 480);
         SizeCondition = ImGuiCond.FirstUseEver;
@@ -49,6 +57,8 @@ internal sealed class ConfigWindow : Window
         DrawProfileTab();
         DrawAppearanceTab();
         DrawContentTab();
+        DrawFindTab();
+        DrawCheckTab();
         DrawColorsTab();
         DrawToggleTab();
     }
@@ -267,6 +277,133 @@ internal sealed class ConfigWindow : Window
         ImGui.EndTabItem();
     }
 
+    private void DrawFindTab()
+    {
+        if (!ImGui.BeginTabItem("Find"))
+            return;
+
+        ImGui.TextWrapped(
+            "Type an action and the buttons that cast it light up on the HUD. Matches the action "
+            + "name, the key a button sends, your own Azeron label, or the FFXIV keybind id.");
+        ImGui.Spacing();
+
+        var query = search.Query;
+        ImGui.SetNextItemWidth(-90);
+        if (ImGui.InputTextWithHint("##find", "Fire III, Sprint, Shift+C...", ref query, 128))
+            search.Query = query;
+
+        ImGui.SameLine();
+        if (ImGui.Button("Clear", new Vector2(80, 0)))
+            search.Clear();
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        if (!search.Active)
+        {
+            ImGui.TextDisabled("Nothing searched for yet.");
+            ImGui.EndTabItem();
+            return;
+        }
+
+        var hits = resolver().Buttons.Values.Where(search.Matches).OrderBy(b => b.AzeronId).ToList();
+        if (hits.Count == 0)
+        {
+            ImGui.TextDisabled("No button does that.");
+            ImGui.EndTabItem();
+            return;
+        }
+
+        ImGui.TextUnformatted($"{hits.Count} button{(hits.Count == 1 ? "" : "s")}:");
+        foreach (var b in hits)
+        {
+            ImGui.BulletText($"Button {b.AzeronId}");
+            ImGui.SameLine();
+            ImGui.TextUnformatted(b.Title.Length > 0 ? b.Title : "(unnamed)");
+            if (b.Chord.Length > 0)
+            {
+                ImGui.SameLine();
+                ImGui.TextDisabled($"— {b.Chord}");
+            }
+        }
+
+        ImGui.EndTabItem();
+    }
+
+    private void DrawCheckTab()
+    {
+        if (!ImGui.BeginTabItem("Check"))
+            return;
+
+        var buttons = resolver().Buttons.Values.OrderBy(b => b.AzeronId).ToList();
+        if (buttons.Count == 0)
+        {
+            ImGui.TextDisabled("No profile loaded.");
+            ImGui.EndTabItem();
+            return;
+        }
+
+        ImGui.TextWrapped("Problems worth knowing about in the loaded profile.");
+        ImGui.Spacing();
+
+        // Two buttons sending the same keystroke. Sometimes deliberate, often
+        // a leftover from rearranging a profile.
+        var duplicates = buttons
+            .Where(b => b.Chord.Length > 0 && !b.IsStick)
+            .GroupBy(b => b.Chord, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1)
+            .ToList();
+
+        Section($"Same key on more than one button ({duplicates.Count})", duplicates.Count, () =>
+        {
+            foreach (var g in duplicates)
+                ImGui.BulletText($"{g.Key} — buttons {string.Join(", ", g.Select(b => b.AzeronId))}");
+        });
+
+        var unbound = buttons.Where(b => b.Tier == ResolutionTier.RawKey).ToList();
+        Section($"Sends a key FFXIV does nothing with ({unbound.Count})", unbound.Count, () =>
+        {
+            foreach (var b in unbound)
+                ImGui.BulletText($"Button {b.AzeronId} — {b.Chord}");
+        });
+
+        var unreadable = buttons.Where(b => b.Tier == ResolutionTier.Unbindable && !b.IsStick).ToList();
+        Section($"FFXIV can't see these at all ({unreadable.Count})", unreadable.Count, () =>
+        {
+            foreach (var b in unreadable)
+                ImGui.BulletText($"Button {b.AzeronId} — {b.Title}");
+        });
+
+        var empty = buttons.Where(b => b.Tier == ResolutionTier.Empty).ToList();
+        Section($"Nothing assigned ({empty.Count})", empty.Count, () =>
+        {
+            ImGui.TextDisabled("Free buttons, if you need somewhere to put something.");
+            foreach (var b in empty)
+                ImGui.BulletText($"Button {b.AzeronId}");
+        });
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        var resolved = buttons.Count(b => b.Tier == ResolutionTier.HotbarSlot);
+        ImGui.TextDisabled($"{resolved} of {buttons.Count} buttons are bound to a hotbar action.");
+
+        ImGui.EndTabItem();
+    }
+
+    /// <summary>A collapsing section that says "none" instead of opening empty.</summary>
+    private static void Section(string label, int count, Action body)
+    {
+        if (count == 0)
+        {
+            ImGui.TextDisabled($"{label} — none");
+            return;
+        }
+
+        if (ImGui.CollapsingHeader(label, ImGuiTreeNodeFlags.DefaultOpen))
+            body();
+    }
+
     private void DrawColorsTab()
     {
         if (!ImGui.BeginTabItem("Colors"))
@@ -297,6 +434,7 @@ internal sealed class ConfigWindow : Window
             Color("Proc outline", ref c.Proc);
             Color("Proc wash", ref c.ProcGlow);
             Color("Key held", ref c.KeyHeld);
+            Color("Search match", ref c.SearchMatch);
         }
 
         if (ImGui.CollapsingHeader("Text"))
