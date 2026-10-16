@@ -20,8 +20,8 @@ resolves like any other button, with the diagonals appearing only when eight-dir
 XInput the game sees a gamepad axis rather than a keystroke, so the HUD names the stick instead of
 guessing at a binding.
 
-Buttons the game can't see — mouse clicks, XInput, macros, the scroll wheel — are tinted and say so,
-rather than silently going blank.
+Buttons the game can't see — mouse clicks, XInput, macros, the scroll wheel — say what they are rather
+than silently going blank.
 
 Hidden by default. Toggle it with `/azeronhud` (or `/azhud`), or bind a key in the settings.
 
@@ -44,12 +44,12 @@ On Linux under Wine, the prefix maps `Z:` to the filesystem root, so the default
 
 Edits you make in the Azeron app show up within a couple of seconds, with no reload.
 
-## Colours
+## Colors
 
-Every colour is editable under Settings → Colours, with a reset per section. The palette is meaningful
-rather than decorative: panel colour tells you how far the plugin got — resolved to a hotbar action, to
-some other keybind, to a key FFXIV doesn't bind, or not readable at all. Alpha is part of each colour and
-the opacity slider multiplies on top.
+Every color is editable under Settings → Colors, with a reset. Buttons are deliberately not tinted by how
+much the plugin could work out — a button is a button, and anything it couldn't resolve says so in its
+label and tooltip instead. The only panel distinction is assigned versus unassigned. Alpha is part of each
+color and the opacity slider multiplies on top.
 
 ## Commands
 

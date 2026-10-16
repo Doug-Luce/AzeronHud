@@ -3,9 +3,9 @@ using System.Numerics;
 namespace AzeronHud;
 
 /// <summary>
-/// Every colour the HUD draws with, so all of it is user-editable.
+/// Every color the HUD draws with, so all of it is user-editable.
 ///
-/// Alpha is part of each colour; the HUD's overall opacity multiplies on top,
+/// Alpha is part of each color; the HUD's overall opacity multiplies on top,
 /// so a veil set to 0.6 alpha stays proportionally lighter as the whole HUD
 /// fades. Defaults are a dark, quiet set meant to sit over the game rather
 /// than compete with it -- the Azeron configurator's own palette is themeable
@@ -13,39 +13,16 @@ namespace AzeronHud;
 /// </summary>
 public sealed class ColorSet
 {
-    // --- button panels, by how much we managed to resolve -------------------
+    // --- buttons -----------------------------------------------------------
 
-    /// <summary>Bound to a hotbar slot: we know the action.</summary>
-    public Vector4 PanelHotbar = new(0.13f, 0.15f, 0.19f, 1.00f);
+    /// <summary>Every button that has something assigned to it.</summary>
+    public Vector4 Panel = new(0.13f, 0.15f, 0.19f, 1.00f);
 
-    /// <summary>Bound to a named FFXIV keybind that isn't a hotbar slot.</summary>
-    public Vector4 PanelKeybind = new(0.12f, 0.17f, 0.22f, 1.00f);
-
-    /// <summary>Sends a key FFXIV has no binding for.</summary>
-    public Vector4 PanelRawKey = new(0.14f, 0.14f, 0.15f, 0.90f);
-
-    /// <summary>
-    /// Assigned to something FFXIV cannot report at all -- a mouse button, a
-    /// macro, the Windows key. Amber by default because these are usually a
-    /// mistake worth noticing.
-    /// </summary>
-    public Vector4 PanelUnresolvable = new(0.22f, 0.17f, 0.09f, 0.90f);
-
-    /// <summary>Nothing assigned.</summary>
+    /// <summary>Buttons with nothing assigned, so they recede.</summary>
     public Vector4 PanelEmpty = new(0.10f, 0.10f, 0.11f, 0.55f);
 
-    /// <summary>
-    /// The thumbstick. Its own colour rather than the unresolvable amber: an
-    /// XInput stick is a perfectly good setup, not a fault to flag.
-    /// </summary>
-    public Vector4 PanelStick = new(0.12f, 0.14f, 0.18f, 0.90f);
-
-    // --- outlines -----------------------------------------------------------
-
-    public Vector4 BorderHotbar = new(0.42f, 0.47f, 0.56f, 1.00f);
-    public Vector4 BorderKeybind = new(0.33f, 0.47f, 0.60f, 1.00f);
-    public Vector4 BorderUnresolvable = new(0.60f, 0.47f, 0.22f, 1.00f);
-    public Vector4 BorderOther = new(0.28f, 0.28f, 0.31f, 0.80f);
+    public Vector4 Border = new(0.42f, 0.47f, 0.56f, 1.00f);
+    public Vector4 BorderEmpty = new(0.28f, 0.28f, 0.31f, 0.80f);
 
     // --- text ---------------------------------------------------------------
 
@@ -64,7 +41,7 @@ public sealed class ColorSet
     public Vector4 ProcGlow = new(1.00f, 0.82f, 0.30f, 0.30f);
     public Vector4 KeyHeld = new(1.00f, 0.84f, 0.38f, 1.00f);
 
-    /// <summary>Icon multiply colour when the action can't be used.</summary>
+    /// <summary>Icon multiply color when the action can't be used.</summary>
     public Vector4 IconUnusable = new(0.55f, 0.55f, 0.55f, 1.00f);
 
     /// <summary>Long-press / double-press dots.</summary>

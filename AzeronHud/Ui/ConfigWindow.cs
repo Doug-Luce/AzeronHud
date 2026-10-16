@@ -261,11 +261,11 @@ internal sealed class ConfigWindow : Window
 
     private void DrawColorsTab()
     {
-        if (!ImGui.BeginTabItem("Colours"))
+        if (!ImGui.BeginTabItem("Colors"))
             return;
 
         ImGui.TextWrapped(
-            "Alpha is part of each colour. The opacity slider on the Appearance tab multiplies on "
+            "Alpha is part of each color. The opacity slider on the Appearance tab multiplies on "
             + "top, so veils stay proportional as the whole HUD fades.");
         ImGui.Spacing();
 
@@ -273,20 +273,11 @@ internal sealed class ConfigWindow : Window
 
         if (ImGui.CollapsingHeader("Buttons", ImGuiTreeNodeFlags.DefaultOpen))
         {
-            ImGui.TextDisabled("Panels, by how much the plugin could work out.");
-            Color("Bound to a hotbar slot", ref c.PanelHotbar);
-            Color("Bound to another keybind", ref c.PanelKeybind);
-            Color("Key FFXIV doesn't bind", ref c.PanelRawKey);
-            Color("Can't be read by FFXIV", ref c.PanelUnresolvable);
-            Color("Nothing assigned", ref c.PanelEmpty);
-            Color("Thumbstick", ref c.PanelStick);
-
+            Color("Button", ref c.Panel);
+            Color("Button outline", ref c.Border);
             ImGui.Spacing();
-            ImGui.TextDisabled("Outlines.");
-            Color("Hotbar outline", ref c.BorderHotbar);
-            Color("Keybind outline", ref c.BorderKeybind);
-            Color("Unreadable outline", ref c.BorderUnresolvable);
-            Color("Other outline", ref c.BorderOther);
+            Color("Unassigned button", ref c.PanelEmpty);
+            Color("Unassigned outline", ref c.BorderEmpty);
         }
 
         if (ImGui.CollapsingHeader("States"))
@@ -318,13 +309,13 @@ internal sealed class ConfigWindow : Window
             Color("Knob, deflected", ref c.StickKnobActive);
         }
 
-        ResetButton("colours", () => cfg.Colors = new ColorSet());
+        ResetButton("colors", () => cfg.Colors = new ColorSet());
 
         ImGui.EndTabItem();
     }
 
     /// <summary>
-    /// A colour row. Saving happens when the picker is released rather than on
+    /// A color row. Saving happens when the picker is released rather than on
     /// every frame of a drag, which would rewrite the config file continuously.
     /// </summary>
     private void Color(string label, ref Vector4 value)

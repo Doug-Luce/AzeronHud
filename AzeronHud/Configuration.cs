@@ -92,7 +92,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool HotkeyCtrl;
     public bool HotkeyAlt;
 
-    /// <summary>Every colour the HUD draws with. See <see cref="ColorSet"/>.</summary>
+    /// <summary>Every color the HUD draws with. See <see cref="ColorSet"/>.</summary>
     public ColorSet Colors = new();
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);

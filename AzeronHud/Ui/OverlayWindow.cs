@@ -181,7 +181,7 @@ internal sealed class OverlayWindow : Window
         draw.PushClipRect(pos, p1, true);
 
         if (cfg.ShowButtonPanels)
-            draw.AddRectFilled(pos, p1, Palette.Panel(col, b.IsStick ? Palette.StickTier : b.Tier, cfg.Opacity), rounding);
+            draw.AddRectFilled(pos, p1, Palette.Panel(col, b.Tier, cfg.Opacity), rounding);
 
         if (b.IsStick)
         {
@@ -201,7 +201,7 @@ internal sealed class OverlayWindow : Window
                 draw.AddRectFilled(pos, p1, Palette.Of(col.Unusable, cfg.Opacity), rounding);
 
             // Out of range is its own state: the action is fine, you just can't
-            // reach. Grey would read as "unusable", so this gets its own colour.
+            // reach. Grey would read as "unusable", so this gets its own color.
             if (cfg.ShowRangeTint && !b.InRange)
                 draw.AddRectFilled(pos, p1, Palette.Of(col.OutOfRange, cfg.Opacity), rounding);
         }
@@ -219,7 +219,7 @@ internal sealed class OverlayWindow : Window
             pos, p1,
             pressed
                 ? Palette.Of(col.KeyHeld, cfg.Opacity)
-                : Palette.Border(col, b.IsStick ? Palette.StickTier : b.Tier, cfg.Opacity),
+                : Palette.Border(col, b.Tier, cfg.Opacity),
             rounding, ImDrawFlags.None, pressed ? 2.5f : 1.5f);
 
         if (!b.IsStick)
