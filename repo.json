@@ -8,8 +8,17 @@
     "ApplicableVersion": "any",
     "Punchline": "Your Azeron keypad on screen, labelled with what each button actually does.",
     "Description": "Draws your Azeron keypad over the game in the same layout as the Azeron configurator, with every button labelled by what it does in FFXIV.\n\nButtons bound to a hotbar slot show the real action icon and name, with its cooldown, charges, MP cost, a highlight when a proc is up, and dimming when it can't be used or the target is out of range. Buttons bound to anything else show the keybind's name, so movement, targeting and UI keys are labelled too. The thumbstick is drawn as a stick and its knob follows your thumb.\n\nIt reads the profile straight out of Azeron Software, so your binds and your own button labels come across automatically, and edits show up within a couple of seconds. The keypad does not need to be plugged in.\n\nHidden by default; toggle it with /azeronhud. Size, colours, and what each button shows are all adjustable, and there is a compact mode that shows only your abilities.\n\nSupports the Azeron Cyborg II.",
-    "Tags": ["hud", "overlay", "keybind", "azeron", "keypad", "hotbar"],
-    "CategoryTags": ["ui"],
+    "Tags": [
+      "hud",
+      "overlay",
+      "keybind",
+      "azeron",
+      "keypad",
+      "hotbar"
+    ],
+    "CategoryTags": [
+      "ui"
+    ],
     "RepoUrl": "https://github.com/Doug-Luce/AzeronHud",
     "IconUrl": "https://raw.githubusercontent.com/Doug-Luce/AzeronHud/main/images/icon.png",
     "AcceptsFeedback": false,
