@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using AzeronHud.Azeron;
@@ -100,6 +101,11 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.ClassJobChanged += OnClassJobChanged;
 
         Reload();
+
+        // Reopen if it was up when the game last closed. Done after Reload so
+        // the first frame has something to draw.
+        if (cfg.RememberOpen && cfg.WasOpen)
+            overlay.IsOpen = true;
     }
 
     // --- loading -----------------------------------------------------------
@@ -109,7 +115,8 @@ public sealed class Plugin : IDalamudPlugin
         try
         {
             store = new ProfileStore(cfg.AzeronRoot);
-            layout = DeviceLayout.ForProductId(cfg.ProductId);
+            var productId = PickDevice();
+            layout = DeviceLayout.ForProductId(productId);
 
             if (!store.Exists)
             {
@@ -120,12 +127,12 @@ public sealed class Plugin : IDalamudPlugin
                 return;
             }
 
-            discovered = store.LoadAll(cfg.ProductId);
+            discovered = store.LoadAll(productId);
             if (discovered.Count == 0)
             {
                 active = null;
                 resolver.Rebuild(null, null);
-                statusText = $"No profiles for device {cfg.ProductId} under {store.Root}";
+                statusText = $"No profiles for device {productId} under {store.Root}";
                 return;
             }
 
@@ -135,7 +142,7 @@ public sealed class Plugin : IDalamudPlugin
 
             if (layout == null)
             {
-                statusText = $"No layout bundled for device {cfg.ProductId}.";
+                statusText = $"No layout bundled for device {productId}.";
                 return;
             }
 
@@ -153,6 +160,43 @@ public sealed class Plugin : IDalamudPlugin
             statusText = $"Failed to load: {ex.Message}";
             Log.Error(ex, "Azeron HUD reload failed");
         }
+    }
+
+    /// <summary>
+    /// Which keypad to show.
+    ///
+    /// The configured id is the authority when the user has turned auto-detect
+    /// off, or when it matches something on disk. Otherwise prefer whichever
+    /// device directory has a layout bundled and the most recently saved
+    /// profile -- which is almost always "the one keypad they own".
+    /// </summary>
+    private int PickDevice()
+    {
+        var devices = store.Devices().ToList();
+        if (devices.Count == 0)
+            return cfg.ProductId;
+
+        if (!cfg.AutoDetectDevice || devices.Contains(cfg.ProductId))
+            return cfg.ProductId;
+
+        var known = devices.Where(d => DeviceLayout.All.ContainsKey(d)).ToList();
+        var candidates = known.Count > 0 ? known : devices;
+
+        var picked = candidates
+            .OrderByDescending(d => store.ProfilePaths(d)
+                .Select(File.GetLastWriteTimeUtc)
+                .DefaultIfEmpty(DateTime.MinValue)
+                .Max())
+            .First();
+
+        if (picked != cfg.ProductId)
+        {
+            Log.Information($"Azeron device {cfg.ProductId} has no profiles; using {picked}.");
+            cfg.ProductId = picked;
+            cfg.Save();
+        }
+
+        return picked;
     }
 
     private void RebuildKeybinds()

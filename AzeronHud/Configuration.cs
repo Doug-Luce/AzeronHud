@@ -14,6 +14,12 @@ public sealed class Configuration : IPluginConfiguration
     /// </summary>
     public string AzeronRoot = string.Empty;
 
+    /// <summary>
+    /// Work out which keypad to show from what's actually on disk, instead of
+    /// making the user pick. Only worth turning off if you own two.
+    /// </summary>
+    public bool AutoDetectDevice = true;
+
     /// <summary>USB product id of the keypad to show. 4855 is the Cyborg II.</summary>
     public int ProductId = 4855;
 
@@ -113,10 +119,22 @@ public sealed class Configuration : IPluginConfiguration
     public bool ShowEmptyButtons = true;
     public bool ShowSecondaryPips = true;
 
+    /// <summary>
+    /// The Azeron button index in the corner of each cell, matching the
+    /// configurator's own button numbering -- handy while editing a bind.
+    /// </summary>
+    public bool ShowButtonNumbers;
+
     /// <summary>Highlight a button while its key is held down.</summary>
     public bool HighlightPressed = true;
 
     // --- visibility --------------------------------------------------------
+
+    /// <summary>Reopen the HUD on load if it was open when you last quit.</summary>
+    public bool RememberOpen = true;
+
+    /// <summary>Whether the HUD was open last time. Maintained, not edited.</summary>
+    public bool WasOpen;
 
     public bool HideInCutscenes = true;
 

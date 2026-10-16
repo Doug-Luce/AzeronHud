@@ -23,7 +23,8 @@ guessing at a binding.
 Buttons the game can't see — mouse clicks, XInput, macros, the scroll wheel — say what they are rather
 than silently going blank.
 
-Hidden by default. Toggle it with `/azeronhud` (or `/azhud`), or bind a key in the settings.
+Hidden by default. Toggle it with `/azeronhud` (or `/azhud`), or bind a key in the settings — and it
+reopens on load if it was open when you last quit.
 
 Position and size it while unlocked, then **lock it** (`/azeronhud lock`) so it stops taking the mouse.
 A locked HUD is completely inert — clicks and drags over it go straight to the game.
@@ -40,7 +41,8 @@ It reads Azeron Software's own config directory. **The keypad doesn't need to be
 reads the saved profile, not the device.
 
 On Linux under Wine, the prefix maps `Z:` to the filesystem root, so the default path is
-`Z:\home\<you>\.config\Azeron Software`. Override it in the settings if yours lives elsewhere.
+`Z:\home\<you>\.config\Azeron Software`. Override it in the settings if yours lives elsewhere. Which
+keypad to show is worked out from what's on disk; the picker is only needed if you own two.
 
 Edits you make in the Azeron app show up within a couple of seconds, with no reload.
 

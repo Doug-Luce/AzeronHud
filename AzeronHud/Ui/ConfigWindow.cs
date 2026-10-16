@@ -114,22 +114,39 @@ internal sealed class ConfigWindow : Window
 
         ImGui.Spacing();
         ImGui.TextUnformatted("Keypad");
-        ImGui.SetNextItemWidth(-1);
-        var layouts = DeviceLayout.All;
-        var layoutName = layouts.TryGetValue(cfg.ProductId, out var l) ? l.Name : $"Unknown ({cfg.ProductId})";
-        if (ImGui.BeginCombo("##device", layoutName))
-        {
-            foreach (var (pid, dev) in layouts)
-            {
-                if (ImGui.Selectable(dev.Name, pid == cfg.ProductId))
-                {
-                    cfg.ProductId = pid;
-                    cfg.Save();
-                    reload();
-                }
-            }
 
-            ImGui.EndCombo();
+        var auto = cfg.AutoDetectDevice;
+        if (ImGui.Checkbox("Detect automatically", ref auto))
+        {
+            cfg.AutoDetectDevice = auto;
+            cfg.Save();
+            reload();
+        }
+
+        // Scoped to the picker alone -- a method-scoped `using` here would grey
+        // out everything below it, including the Reload button.
+        using (ImRaii.Disabled(cfg.AutoDetectDevice))
+        {
+            ImGui.SetNextItemWidth(-1);
+            var layouts = DeviceLayout.All;
+            var layoutName = layouts.TryGetValue(cfg.ProductId, out var l)
+                ? l.Name
+                : $"Unknown ({cfg.ProductId})";
+
+            if (ImGui.BeginCombo("##device", layoutName))
+            {
+                foreach (var (pid, dev) in layouts)
+                {
+                    if (ImGui.Selectable(dev.Name, pid == cfg.ProductId))
+                    {
+                        cfg.ProductId = pid;
+                        cfg.Save();
+                        reload();
+                    }
+                }
+
+                ImGui.EndCombo();
+            }
         }
 
         ImGui.Spacing();
@@ -259,6 +276,7 @@ internal sealed class ConfigWindow : Window
         }
 
         Toggle("Key each button sends", ref cfg.ShowChord);
+        Toggle("Azeron button numbers", ref cfg.ShowButtonNumbers);
         Toggle("Dark outline behind text", ref cfg.ShowTextOutline);
         Toggle("Cooldown sweep", ref cfg.ShowCooldown);
         Toggle("Cooldown seconds", ref cfg.ShowCooldownNumerals);
@@ -291,6 +309,7 @@ internal sealed class ConfigWindow : Window
             cfg.ShowActionName = d.ShowActionName;
             cfg.NameLines = d.NameLines;
             cfg.ShowTextOutline = d.ShowTextOutline;
+            cfg.ShowButtonNumbers = d.ShowButtonNumbers;
             cfg.ShowReadyFlash = d.ShowReadyFlash;
             cfg.OnlyHotbarActions = d.OnlyHotbarActions;
             cfg.HighlightPressed = d.HighlightPressed;
@@ -341,6 +360,7 @@ internal sealed class ConfigWindow : Window
             Color("Key", ref c.TextKey);
             Color("Cost", ref c.TextCost);
             Color("Charges", ref c.TextCharges);
+            Color("Button number", ref c.TextButtonNumber);
             Color("Text outline", ref c.TextOutline);
             Color("Long/double-press dots", ref c.Pip);
         }
@@ -423,6 +443,7 @@ internal sealed class ConfigWindow : Window
         ImGui.Separator();
         ImGui.Spacing();
 
+        Toggle("Reopen on load if it was open", ref cfg.RememberOpen);
         Toggle("Hide during cutscenes", ref cfg.HideInCutscenes);
         Toggle("Dim when out of combat", ref cfg.DimOutOfCombat);
 

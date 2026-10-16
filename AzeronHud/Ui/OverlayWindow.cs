@@ -69,6 +69,21 @@ internal sealed class OverlayWindow : Window
         SizeCondition = ImGuiCond.FirstUseEver;
     }
 
+    // Persist through the window's own hooks rather than the toggle command, so
+    // every route in and out is covered.
+    public override void OnOpen() => Remember(true);
+
+    public override void OnClose() => Remember(false);
+
+    private void Remember(bool open)
+    {
+        if (cfg.WasOpen == open)
+            return;
+
+        cfg.WasOpen = open;
+        cfg.Save();
+    }
+
     public override bool DrawConditions()
     {
         if (!Plugin.ClientState.IsLoggedIn)
@@ -298,8 +313,14 @@ internal sealed class OverlayWindow : Window
         if (!b.IsStick)
             DrawText(draw, b, pos, size, cell);
 
+        // Bottom-right is shared: the number takes the corner and the
+        // long/double-press dots start to the left of whatever it occupies.
+        var numberWidth = cfg.ShowButtonNumbers
+            ? DrawButtonNumber(draw, b, pos, size, cell)
+            : 0f;
+
         if (cfg.ShowSecondaryPips && (b.HasLongPress || b.HasDoublePress))
-            DrawPips(draw, b, pos, size, cell, opacity, col.Pip);
+            DrawPips(draw, b, pos, size, cell, opacity, col.Pip, numberWidth);
 
         draw.PopClipRect();
 
@@ -705,12 +726,33 @@ internal sealed class OverlayWindow : Window
         draw.PopClipRect();
     }
 
+    /// <summary>
+    /// The Azeron button index, bottom-right. Matches the configurator's own
+    /// button numbering, so the HUD and the app can be read side by side.
+    /// Returns how much of the corner it used.
+    /// </summary>
+    private float DrawButtonNumber(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
+    {
+        var text = b.AzeronId.ToString();
+        var fontSize = LabelSize(cell, 0.15f);
+        var extent = ImGui.CalcTextSize(text) * (fontSize / ImGui.GetFontSize());
+        var pad = cell * 0.05f;
+
+        Label(draw, fontSize,
+            new Vector2(pos.X + size.X - extent.X - pad, pos.Y + size.Y - extent.Y - pad),
+            Palette.Of(cfg.Colors.TextButtonNumber, opacity), text);
+
+        return extent.X + (pad * 1.6f);
+    }
+
     /// <summary>One dot for a long-press bind, two for a double-press.</summary>
-    private static void DrawPips(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell, float opacity, Vector4 pip)
+    private static void DrawPips(
+        ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell, float opacity,
+        Vector4 pip, float rightInset)
     {
         var r = cell * 0.035f;
         var y = pos.Y + size.Y - (r * 2.2f);
-        var x = pos.X + size.X - (r * 2.2f);
+        var x = pos.X + size.X - (r * 2.2f) - rightInset;
 
         if (b.HasLongPress)
         {

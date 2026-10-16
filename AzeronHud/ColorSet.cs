@@ -32,6 +32,9 @@ public sealed class ColorSet
     public Vector4 TextCost = new(0.68f, 0.82f, 1.00f, 1.00f);
     public Vector4 TextCharges = new(1.00f, 0.95f, 0.70f, 1.00f);
 
+    /// <summary>The Azeron button index, when shown. Deliberately quiet.</summary>
+    public Vector4 TextButtonNumber = new(0.52f, 0.55f, 0.60f, 1.00f);
+
     /// <summary>Drawn behind every label so text stays readable on any background.</summary>
     public Vector4 TextOutline = new(0.00f, 0.00f, 0.00f, 0.85f);
 
