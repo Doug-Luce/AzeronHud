@@ -38,6 +38,7 @@ internal static class Palette
     internal static readonly uint UnusableVeil = Rgba(0f, 0f, 0f, 0.45f);
     internal static readonly uint Charges = Rgba(1.00f, 0.95f, 0.70f, 1f);
     internal static readonly uint Pip = Rgba(0.70f, 0.78f, 0.90f, 0.85f);
+    internal static readonly uint StickRing = Rgba(0.45f, 0.50f, 0.60f, 0.75f);
     internal static readonly Vector4 IconTintUnusable = new(0.55f, 0.55f, 0.55f, 1f);
 
     /// <summary>

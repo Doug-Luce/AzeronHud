@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using AzeronHud.Azeron;
 
 namespace AzeronHud.Game;
@@ -58,4 +59,17 @@ internal sealed class ResolvedButton
     internal string? InputIdName;
 
     internal InputType Type;
+
+    /// <summary>Set on a thumbstick cell, so the overlay draws it as a rose.</summary>
+    internal bool IsStick;
+
+    /// <summary>Which compass point this is, when it's one of a stick's directions.</summary>
+    internal StickDirection Direction = StickDirection.None;
+
+    /// <summary>
+    /// A thumbstick's resolved directions. Each one goes through the same
+    /// chain as a button, so a stick direction bound to a hotbar slot gets the
+    /// real icon, name and cooldown too.
+    /// </summary>
+    internal List<ResolvedButton>? Directions;
 }

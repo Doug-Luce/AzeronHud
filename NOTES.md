@@ -112,6 +112,38 @@ and gear sets all resolve through one code path.
 
 Don't reimplement `ActionManager.GetRecastTime` arithmetic.
 
+## The thumbstick is two unrelated problems
+
+`analogSettings` is present on **every** input with identical default values, so
+it is only meaningful on id 24. Reading it off a plain button gives you a
+convincing-looking WASD that means nothing.
+
+Worse, the same trap applies to the stick itself. The FFXIV profile has the
+stick set to `XInputJoystick` (type 21) and *still* carries `analogKeys` of
+W/D/S/A -- stale defaults. Gate on `InputType.EmulatesKeys()`, never on the
+presence of `analogKeys`, or the HUD will confidently display movement keys the
+stick does not send.
+
+Two cases, both verified against the renderer bundle:
+
+- **Emulates keys** (the AnalogJoystickWithKeys family, plus
+  `XInputJoystickAndKeys`): each direction is an ordinary bind and resolves
+  through the same chain as a button. `isRightAnalog` picks which half of
+  `analogKeys`/`diagonalKeys` is live (`o.isRightAnalog ? Sl.RIGHT : Sl.LEFT`),
+  and `isEightDirectionalTrigger` gates the diagonals -- when false they are
+  stored but inert, and the configurator renders them as `null`.
+- **XInput** (type 21): the game sees a gamepad axis. Analog axes are not in
+  FFXIV's keybind table at all -- `Keybind._gamepadSettings` holds the PAD_*
+  pseudo-keys for gamepad *buttons*, not sticks. Nothing in `IGameConfig`
+  reliably names what the left stick does either, so the HUD says which stick
+  it is and points at the game's Gamepad settings rather than inventing a
+  binding.
+
+Direction arrays mix encodings within one array -- `["KeyW",0,0]`, a string
+then two bare JSON numbers. Json.NET coerces them to `"0"`, which `KeyCodeMap`
+already treats as empty, but it means the DTO must be `List<string>` and not
+`List<object>`.
+
 ## Draw-list colours don't see ImGui's style alpha
 
 `ImGuiStyleVar.Alpha` only reaches widgets that resolve their colour through

@@ -46,6 +46,12 @@ public sealed class Configuration : IPluginConfiguration
 
     public float Rounding = 6f;
 
+    /// <summary>The panel behind the whole HUD. Off leaves the buttons floating.</summary>
+    public bool ShowWindowBackground = true;
+
+    /// <summary>The filled panel behind each button. Off leaves outlines and icons only.</summary>
+    public bool ShowButtonPanels = true;
+
     /// <summary>
     /// Make the HUD completely inert: no mouse input, no moving, no resizing,
     /// no tooltips, and nothing taken away from the game. This is what you

@@ -19,7 +19,13 @@ internal sealed unsafe class ButtonResolver
 {
     private readonly KeybindIndex keybinds;
     private readonly Dictionary<int, ResolvedButton> buttons = new();
-    private readonly Dictionary<int, HotbarRef> hotbarByButton = new();
+
+    /// <summary>
+    /// Every cell backed by a hotbar slot, buttons and stick directions alike.
+    /// Flat rather than keyed by button id because a stick contributes up to
+    /// eight of them.
+    /// </summary>
+    private readonly List<(ResolvedButton Cell, HotbarRef Ref)> hotbarBacked = new();
 
     internal ButtonResolver(KeybindIndex keybinds) => this.keybinds = keybinds;
 
@@ -32,7 +38,7 @@ internal sealed unsafe class ButtonResolver
     internal void Rebuild(AzeronProfile? profile, DeviceLayout? layout)
     {
         buttons.Clear();
-        hotbarByButton.Clear();
+        hotbarBacked.Clear();
 
         if (profile == null || layout == null)
             return;
@@ -47,8 +53,14 @@ internal sealed unsafe class ButtonResolver
 
         foreach (var lb in layout.Buttons)
         {
-            if (byId.TryGetValue(lb.Id, out var input))
-                buttons[lb.Id] = Resolve(input);
+            if (!byId.TryGetValue(lb.Id, out var input))
+                continue;
+
+            var resolved = Resolve(input);
+            if (lb.Kind == "stick")
+                ResolveStick(resolved, input);
+
+            buttons[lb.Id] = resolved;
         }
 
         RefreshVolatile();
@@ -103,41 +115,126 @@ internal sealed unsafe class ButtonResolver
             return b;
         }
 
+        ResolveChord(b, chord, label);
+        return b;
+    }
+
+    /// <summary>
+    /// The shared tail of the resolution chain: keystroke -> FFXIV keybind ->
+    /// hotbar slot. Used by both buttons and thumbstick directions.
+    /// </summary>
+    private void ResolveChord(ResolvedButton b, KeyChord chord, string? label)
+    {
         if (KeyCodeMap.IsUnbindable(chord.Vk))
         {
             b.Tier = ResolutionTier.Unbindable;
             b.Title = label ?? b.Chord;
             b.UnbindableReason = "FFXIV can't bind the Windows key.";
-            return b;
+            return;
         }
 
         if (!keybinds.TryResolve(chord, out var id))
         {
             b.Tier = ResolutionTier.RawKey;
             b.Title = label ?? b.Chord;
-            return b;
+            return;
         }
 
         b.InputIdName = id.ToString();
 
         if (keybinds.TryHotbar(id, out var href))
         {
-            hotbarByButton[input.Id] = href;
             b.Tier = ResolutionTier.HotbarSlot;
-            if (!FillFromHotbar(b, href))
+            if (FillFromHotbar(b, href))
             {
-                // Bound to a slot, but the slot is empty on this job.
-                hotbarByButton.Remove(input.Id);
-                b.Tier = ResolutionTier.Keybind;
-                b.Title = keybinds.NameOf(id);
+                hotbarBacked.Add((b, href));
+                return;
             }
 
-            return b;
+            // Bound to a slot, but the slot is empty on this job.
         }
 
         b.Tier = ResolutionTier.Keybind;
         b.Title = keybinds.NameOf(id);
-        return b;
+    }
+
+    /// <summary>
+    /// Work out what the thumbstick does.
+    ///
+    /// Two quite different cases. If it emulates keys, each direction is an
+    /// ordinary bind and resolves through the same chain as a button. If it is
+    /// an XInput stick the game sees a gamepad axis, which isn't in the keybind
+    /// table at all -- FFXIV wires the left stick to movement and the right to
+    /// the camera in its own pad settings, so the honest thing is to say which
+    /// stick it is rather than invent a binding.
+    /// </summary>
+    private void ResolveStick(ResolvedButton b, AzeronInput input)
+    {
+        b.IsStick = true;
+
+        var settings = input.AnalogSettings;
+        var type = input.TypeAt(PressKind.Single);
+        var side = settings?.IsRightAnalog == true ? "Right" : "Left";
+
+        if (type.IsXInputStick())
+        {
+            b.Tier = ResolutionTier.Unbindable;
+            b.Title = b.AzeronLabel ?? $"{side} stick";
+            b.UnbindableReason =
+                $"Set to XInput, so FFXIV sees it as a gamepad's {side.ToLowerInvariant()} stick. "
+                + "What it does is set in the game's own Gamepad settings, not its keybinds.";
+        }
+
+        if (!type.EmulatesKeys() || settings == null)
+            return;
+
+        var cardinals = settings.Cardinals;
+        var diagonals = settings.Diagonals;
+        if (cardinals == null && diagonals == null)
+            return;
+
+        var directions = new List<ResolvedButton>();
+
+        void Add(StickDirection dir, List<string>? keys)
+        {
+            if (keys == null)
+                return;
+
+            // Directions have no separate modifier array; Decode already folds
+            // any modifier it finds among the keys into the chord.
+            var chord = KeyCodeMap.Decode(keys, Array.Empty<string>());
+            if (chord.IsEmpty)
+                return;
+
+            var d = new ResolvedButton
+            {
+                AzeronId = input.Id,
+                Direction = dir,
+                Type = type,
+                Chord = chord.ToString(),
+                Vk = chord.Vk,
+            };
+
+            ResolveChord(d, chord, null);
+            directions.Add(d);
+        }
+
+        Add(StickDirection.Up, cardinals?.Up);
+        Add(StickDirection.Right, cardinals?.Right);
+        Add(StickDirection.Down, cardinals?.Down);
+        Add(StickDirection.Left, cardinals?.Left);
+        Add(StickDirection.UpRight, diagonals?.UpRight);
+        Add(StickDirection.DownRight, diagonals?.DownRight);
+        Add(StickDirection.DownLeft, diagonals?.DownLeft);
+        Add(StickDirection.UpLeft, diagonals?.UpLeft);
+
+        if (directions.Count == 0)
+            return;
+
+        b.Directions = directions;
+        b.Tier = ResolutionTier.Keybind;
+        b.Title = b.AzeronLabel ?? $"{side} stick";
+        b.UnbindableReason = null;
     }
 
     /// <summary>Read a hotbar slot's icon and name. False when the slot is empty.</summary>
@@ -176,37 +273,34 @@ internal sealed unsafe class ButtonResolver
     /// </summary>
     internal void RefreshVolatile()
     {
-        if (hotbarByButton.Count == 0)
+        if (hotbarBacked.Count == 0)
             return;
 
         var module = RaptureHotbarModule.Instance();
         if (module == null)
             return;
 
-        foreach (var (buttonId, href) in hotbarByButton)
+        foreach (var (cell, href) in hotbarBacked)
         {
-            if (!buttons.TryGetValue(buttonId, out var b))
-                continue;
-
             var slot = module->GetSlotById((uint)href.Bar, (uint)href.Slot);
             if (slot == null || slot->IsEmpty)
             {
-                b.Usable = false;
-                b.CooldownPct = 0;
-                b.CooldownSeconds = 0;
+                cell.Usable = false;
+                cell.CooldownPct = 0;
+                cell.CooldownSeconds = 0;
                 continue;
             }
 
             var type = slot->ApparentSlotType;
             var action = slot->ApparentActionId;
 
-            b.Usable = slot->IsSlotUsable(type, action);
+            cell.Usable = slot->IsSlotUsable(type, action);
 
             var seconds = 0;
             var pct = slot->GetSlotActionCooldownPercentage(&seconds);
-            b.CooldownPct = Math.Clamp(pct / 100f, 0f, 1f);
-            b.CooldownSeconds = seconds;
-            b.Charges = slot->GetApparentIconRecastCharges();
+            cell.CooldownPct = Math.Clamp(pct / 100f, 0f, 1f);
+            cell.CooldownSeconds = seconds;
+            cell.Charges = slot->GetApparentIconRecastCharges();
         }
     }
 
@@ -216,24 +310,21 @@ internal sealed unsafe class ButtonResolver
     /// </summary>
     internal bool StructureLooksStale()
     {
-        if (hotbarByButton.Count == 0)
+        if (hotbarBacked.Count == 0)
             return false;
 
         var module = RaptureHotbarModule.Instance();
         if (module == null)
             return false;
 
-        foreach (var (buttonId, href) in hotbarByButton)
+        foreach (var (cell, href) in hotbarBacked)
         {
-            if (!buttons.TryGetValue(buttonId, out var b))
-                continue;
-
             var slot = module->GetSlotById((uint)href.Bar, (uint)href.Slot);
             if (slot == null)
                 continue;
 
             var icon = slot->GetIconIdForSlot(slot->ApparentSlotType, slot->ApparentActionId);
-            if (icon > 0 && (uint)icon != b.IconId)
+            if (icon > 0 && (uint)icon != cell.IconId)
                 return true;
         }
 

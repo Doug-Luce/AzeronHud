@@ -19,6 +19,9 @@ internal sealed class ConfigWindow : Window
 
     private bool capturingHotkey;
 
+    /// <summary>Which tab's reset button is armed, if any.</summary>
+    private string? pendingReset;
+
     internal ConfigWindow(
         Configuration cfg,
         Action reload,
@@ -34,6 +37,8 @@ internal sealed class ConfigWindow : Window
         Size = new Vector2(460, 480);
         SizeCondition = ImGuiCond.FirstUseEver;
     }
+
+    public override void OnClose() => pendingReset = null;
 
     public override void Draw()
     {
@@ -183,6 +188,10 @@ internal sealed class ConfigWindow : Window
         }
 
         ImGui.Spacing();
+        Toggle("Panel behind the whole HUD", ref cfg.ShowWindowBackground);
+        Toggle("Panel behind each button", ref cfg.ShowButtonPanels);
+
+        ImGui.Spacing();
         var locked = cfg.Locked;
         if (ImGui.Checkbox("Lock (ignore the mouse entirely)", ref locked))
         {
@@ -196,6 +205,19 @@ internal sealed class ConfigWindow : Window
             : "Unlocked: you can drag and resize the HUD, and hovering a button shows what it "
               + "does. While unlocked the mouse is captured over the HUD, so lock it once "
               + "you're happy with the position. /azeronhud lock toggles this.");
+
+        ResetButton("appearance", () =>
+        {
+            var d = new Configuration();
+            cfg.ScaleToWindow = d.ScaleToWindow;
+            cfg.CellSize = d.CellSize;
+            cfg.GapRatio = d.GapRatio;
+            cfg.Opacity = d.Opacity;
+            cfg.Rounding = d.Rounding;
+            cfg.ShowWindowBackground = d.ShowWindowBackground;
+            cfg.ShowButtonPanels = d.ShowButtonPanels;
+            cfg.Locked = d.Locked;
+        });
 
         ImGui.EndTabItem();
     }
@@ -213,6 +235,19 @@ internal sealed class ConfigWindow : Window
         Toggle("Highlight the key being held", ref cfg.HighlightPressed);
         Toggle("Unassigned buttons", ref cfg.ShowEmptyButtons);
         Toggle("Long-press / double-press dots", ref cfg.ShowSecondaryPips);
+
+        ResetButton("content", () =>
+        {
+            var d = new Configuration();
+            cfg.ShowIcons = d.ShowIcons;
+            cfg.ShowChord = d.ShowChord;
+            cfg.ShowCooldown = d.ShowCooldown;
+            cfg.ShowCooldownNumerals = d.ShowCooldownNumerals;
+            cfg.DimUnusable = d.DimUnusable;
+            cfg.HighlightPressed = d.HighlightPressed;
+            cfg.ShowEmptyButtons = d.ShowEmptyButtons;
+            cfg.ShowSecondaryPips = d.ShowSecondaryPips;
+        });
 
         ImGui.EndTabItem();
     }
@@ -301,6 +336,39 @@ internal sealed class ConfigWindow : Window
 
         vk = 0;
         return false;
+    }
+
+    /// <summary>
+    /// Reset control for one tab. Two clicks, because there is no undo and a
+    /// stray click would otherwise throw away a layout someone tuned.
+    /// </summary>
+    private void ResetButton(string scope, Action reset)
+    {
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        var armed = pendingReset == scope;
+        if (ImGui.Button(armed ? "Click again to confirm" : "Reset to defaults"))
+        {
+            if (armed)
+            {
+                reset();
+                cfg.Save();
+                pendingReset = null;
+            }
+            else
+            {
+                pendingReset = scope;
+            }
+        }
+
+        if (!armed)
+            return;
+
+        ImGui.SameLine();
+        if (ImGui.Button("Cancel"))
+            pendingReset = null;
     }
 
     private void Toggle(string label, ref bool value)

@@ -12,6 +12,11 @@ Each button shows, in order of preference:
 3. your own **Azeron label**, if you set one in the Azeron app;
 4. the **raw key** otherwise.
 
+The **thumbstick** is drawn as a compass rose. If it's set to emulate keys, each live direction resolves
+like any other button -- icon, name and cooldown -- and the diagonals appear only when eight-directional
+mode is on. If it's set to XInput, the game sees a gamepad axis rather than a keystroke, so the HUD says
+which stick it is instead of guessing at a binding.
+
 Buttons the game can't see — mouse clicks, XInput, macros, the scroll wheel, the thumbstick — are tinted
 and say so, rather than silently going blank.
 

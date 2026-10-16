@@ -83,6 +83,9 @@ internal sealed class OverlayWindow : Window
         if (!cfg.ScaleToWindow)
             Flags |= ImGuiWindowFlags.AlwaysAutoResize;
 
+        if (!cfg.ShowWindowBackground)
+            Flags |= ImGuiWindowFlags.NoBackground;
+
         if (cfg.Locked)
         {
             // Locked means inert, not merely immovable. Without NoMouseInputs
@@ -175,10 +178,17 @@ internal sealed class OverlayWindow : Window
         // action names all overflow otherwise.
         draw.PushClipRect(pos, p1, true);
 
-        draw.AddRectFilled(pos, p1, Palette.Background(b.Tier, cfg.Opacity), rounding);
+        if (cfg.ShowButtonPanels)
+            draw.AddRectFilled(pos, p1, Palette.Background(b.Tier, cfg.Opacity), rounding);
 
-        if (cfg.ShowIcons && b.IconId != 0)
+        if (b.IsStick)
+        {
+            DrawStick(draw, b, pos, size, cell);
+        }
+        else if (cfg.ShowIcons && b.IconId != 0)
+        {
             DrawIcon(draw, b, pos, size, cfg.Opacity);
+        }
 
         if (cfg.ShowCooldown && b.CooldownPct > 0f)
             DrawCooldown(draw, b, pos, size, cell);
@@ -193,7 +203,8 @@ internal sealed class OverlayWindow : Window
                 : Palette.Border(b.Tier, cfg.Opacity),
             rounding, ImDrawFlags.None, pressed ? 2.5f : 1.5f);
 
-        DrawText(draw, b, pos, size, cell);
+        if (!b.IsStick)
+            DrawText(draw, b, pos, size, cell);
 
         if (cfg.ShowSecondaryPips && (b.HasLongPress || b.HasDoublePress))
             DrawPips(draw, b, pos, size, cell, cfg.Opacity);
@@ -212,15 +223,104 @@ internal sealed class OverlayWindow : Window
             DrawTooltip(b);
     }
 
-    private static void DrawIcon(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float opacity)
+    /// <summary>
+    /// The thumbstick, as a compass rose: a ring with each live direction
+    /// placed at its own bearing, showing the action it triggers.
+    ///
+    /// The cell is a 2x2 span and taller than it is wide, so the ring is an
+    /// ellipse -- a circle would waste the vertical room or overflow the sides.
+    /// </summary>
+    private void DrawStick(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)
+    {
+        var centre = pos + (size / 2f);
+        var radius = new Vector2(size.X * 0.33f, size.Y * 0.33f);
+        var slot = MathF.Min(size.X, size.Y) * 0.28f;
+
+        // This ImGui binding has AddCircle but no AddEllipse, so walk the path.
+        const int RingSegments = 48;
+        for (var i = 0; i < RingSegments; i++)
+        {
+            var a = i * MathF.Tau / RingSegments;
+            draw.PathLineTo(centre + new Vector2(MathF.Cos(a) * radius.X, MathF.Sin(a) * radius.Y));
+        }
+
+        draw.PathStroke(Palette.Fade(Palette.StickRing, cfg.Opacity), ImDrawFlags.Closed, 1.5f);
+
+        // Centre label: which stick it is, or why it can't be read.
+        if (b.Title.Length > 0)
+        {
+            var scale = cell / ImGui.GetFontSize() * 0.17f;
+            var extent = ImGui.CalcTextSize(b.Title) * scale;
+            draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
+                centre - (extent / 2f),
+                Palette.Fade(b.Directions == null ? Palette.TitleDim : Palette.Title, cfg.Opacity),
+                b.Title);
+        }
+
+        if (b.Directions == null)
+            return;
+
+        foreach (var d in b.Directions)
+        {
+            var angle = (float)d.Direction * MathF.PI / 4f;   // clockwise from north
+            var at = centre + new Vector2(MathF.Sin(angle) * radius.X, -MathF.Cos(angle) * radius.Y);
+            DrawStickDirection(draw, d, at, slot, cell);
+        }
+    }
+
+    private void DrawStickDirection(ImDrawListPtr draw, ResolvedButton d, Vector2 centre, float slot, float cell)
+    {
+        var half = new Vector2(slot / 2f);
+        var p0 = centre - half;
+        var p1 = centre + half;
+        var rounding = slot * 0.18f;
+
+        if (cfg.ShowButtonPanels)
+            draw.AddRectFilled(p0, p1, Palette.Background(d.Tier, cfg.Opacity), rounding);
+
+        if (cfg.ShowIcons && d.IconId != 0)
+        {
+            DrawIcon(draw, d, p0, new Vector2(slot), cfg.Opacity, inset: 0.08f, fill: 0.84f);
+        }
+        else
+        {
+            // No icon to show, so the key itself is the most useful label.
+            var text = d.Chord.Length > 0 ? d.Chord : d.Title;
+            if (text.Length > 0)
+            {
+                var scale = cell / ImGui.GetFontSize() * 0.15f;
+                var extent = ImGui.CalcTextSize(text) * scale;
+                draw.PushClipRect(p0, p1, true);
+                draw.AddText(ImGui.GetFont(), ImGui.GetFontSize() * scale,
+                    centre - (extent / 2f), Palette.Fade(Palette.Title, cfg.Opacity), text);
+                draw.PopClipRect();
+            }
+        }
+
+        if (cfg.ShowCooldown && d.CooldownPct > 0f)
+        {
+            draw.AddRectFilled(p0, new Vector2(p1.X, p0.Y + (slot * d.CooldownPct)),
+                Palette.Fade(Palette.CooldownVeil, cfg.Opacity));
+        }
+
+        if (cfg.DimUnusable && !d.Usable && d.Tier == ResolutionTier.HotbarSlot)
+            draw.AddRectFilled(p0, p1, Palette.Fade(Palette.UnusableVeil, cfg.Opacity), rounding);
+
+        draw.AddRect(p0, p1, Palette.Border(d.Tier, cfg.Opacity), rounding, ImDrawFlags.None, 1f);
+    }
+
+    private static void DrawIcon(
+        ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float opacity,
+        float inset = 0.06f, float fill = 0.56f)
     {
         var shared = Plugin.Textures.GetFromGameIcon(new GameIconLookup(b.IconId));
         if (!shared.TryGetWrap(out var wrap, out _))
             return;
 
         // Square icon, centred in the upper part of the cell so the label has room.
-        var side = MathF.Min(size.X, size.Y) * 0.56f;
-        var topLeft = new Vector2(pos.X + ((size.X - side) / 2f), pos.Y + (size.Y * 0.06f));
+        // A stick direction has no label strip, so it fills more of its slot.
+        var side = MathF.Min(size.X, size.Y) * fill;
+        var topLeft = new Vector2(pos.X + ((size.X - side) / 2f), pos.Y + (size.Y * inset));
         var tint = Palette.Fade(
             b.Usable ? 0xFFFFFFFFu : ImGui.ColorConvertFloat4ToU32(Palette.IconTintUnusable),
             opacity);
@@ -359,7 +459,35 @@ internal sealed class OverlayWindow : Window
 
         if (b.UnbindableReason != null)
             ImGui.TextDisabled(b.UnbindableReason);
+
+        if (b.Directions is not { Count: > 0 })
+            return;
+
+        ImGui.Separator();
+        foreach (var d in b.Directions)
+        {
+            var name = d.Title.Length > 0 ? d.Title : d.Chord;
+            ImGui.TextUnformatted($"{DirectionName(d.Direction),-10} {name}");
+            if (d.Chord.Length > 0 && d.Title != d.Chord)
+            {
+                ImGui.SameLine();
+                ImGui.TextDisabled($"({d.Chord})");
+            }
+        }
     }
+
+    private static string DirectionName(StickDirection d) => d switch
+    {
+        StickDirection.Up => "Up",
+        StickDirection.UpRight => "Up-right",
+        StickDirection.Right => "Right",
+        StickDirection.DownRight => "Down-right",
+        StickDirection.Down => "Down",
+        StickDirection.DownLeft => "Down-left",
+        StickDirection.Left => "Left",
+        StickDirection.UpLeft => "Up-left",
+        _ => string.Empty,
+    };
 
     /// <summary>
     /// Whether this button's key is down right now. IKeyState reads the game's

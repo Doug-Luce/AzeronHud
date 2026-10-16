@@ -55,6 +55,12 @@ internal sealed class AzeronInput
     [JsonProperty("keyValuesDouble")] public List<string> KeyValuesDouble = new();
     [JsonProperty("metaValuesDouble")] public List<string> MetaValuesDouble = new();
 
+    /// <summary>
+    /// Only meaningful on the thumbstick. Every input carries a copy of this
+    /// block with default values, so never read it off a plain button.
+    /// </summary>
+    [JsonProperty("analogSettings")] public AnalogSettings? AnalogSettings;
+
     /// <summary>True when the button physically exists on this keypad.</summary>
     [JsonIgnore] public bool IsPresent => PinOne != 255 || PinTwo != 255;
 
@@ -70,6 +76,71 @@ internal sealed class AzeronInput
         PressKind.Double => (KeyValuesDouble, MetaValuesDouble),
         _ => (KeyValues, MetaValues),
     };
+}
+
+/// <summary>The thumbstick's configuration.</summary>
+internal sealed class AnalogSettings
+{
+    /// <summary>Selects which half of <see cref="AnalogKeys"/> is live.</summary>
+    [JsonProperty("isRightAnalog")] public bool IsRightAnalog;
+
+    /// <summary>When false the diagonals are stored but inert.</summary>
+    [JsonProperty("isEightDirectionalTrigger")] public bool IsEightDirectionalTrigger;
+
+    [JsonProperty("analogKeys")] public AnalogKeySides? AnalogKeys;
+    [JsonProperty("diagonalKeys")] public DiagonalKeySides? DiagonalKeys;
+
+    /// <summary>The cardinal keys actually in use, or null if unset.</summary>
+    internal CardinalKeys? Cardinals =>
+        IsRightAnalog ? AnalogKeys?.Right : AnalogKeys?.Left;
+
+    /// <summary>The diagonal keys actually in use, or null if unset or disabled.</summary>
+    internal DiagonalKeys? Diagonals => !IsEightDirectionalTrigger
+        ? null
+        : IsRightAnalog ? DiagonalKeys?.Right : DiagonalKeys?.Left;
+}
+
+internal sealed class AnalogKeySides
+{
+    [JsonProperty("left")] public CardinalKeys? Left;
+    [JsonProperty("right")] public CardinalKeys? Right;
+}
+
+internal sealed class DiagonalKeySides
+{
+    [JsonProperty("left")] public DiagonalKeys? Left;
+    [JsonProperty("right")] public DiagonalKeys? Right;
+}
+
+/// <summary>Each direction holds up to three key slots, same encoding as a button.</summary>
+internal sealed class CardinalKeys
+{
+    [JsonProperty("up")] public List<string> Up = new();
+    [JsonProperty("right")] public List<string> Right = new();
+    [JsonProperty("down")] public List<string> Down = new();
+    [JsonProperty("left")] public List<string> Left = new();
+}
+
+internal sealed class DiagonalKeys
+{
+    [JsonProperty("up_right")] public List<string> UpRight = new();
+    [JsonProperty("up_left")] public List<string> UpLeft = new();
+    [JsonProperty("down_left")] public List<string> DownLeft = new();
+    [JsonProperty("down_right")] public List<string> DownRight = new();
+}
+
+/// <summary>Compass points, clockwise from north.</summary>
+internal enum StickDirection
+{
+    None = -1,
+    Up = 0,
+    UpRight = 1,
+    Right = 2,
+    DownRight = 3,
+    Down = 4,
+    DownLeft = 5,
+    Left = 6,
+    UpLeft = 7,
 }
 
 internal enum PressKind

@@ -56,6 +56,31 @@ internal static class InputTypeExtensions
     /// <summary>True when the slot emits a keystroke we can match against FFXIV's keybinds.</summary>
     internal static bool IsKeyboard(this InputType t) => t == InputType.KeyboardKey;
 
+    /// <summary>
+    /// True when the stick emits keystrokes as well as (or instead of) analog
+    /// movement, so its directions can be resolved against FFXIV's keybinds.
+    /// A plain AnalogJoystick or XInputJoystick emits neither.
+    /// </summary>
+    internal static bool EmulatesKeys(this InputType t) => t
+        is InputType.AnalogJoystickWithKeys
+        or InputType.AnalogJoystickWithKeysUp
+        or InputType.AnalogJoystickWithKeysRight
+        or InputType.AnalogJoystickWithKeysDown
+        or InputType.AnalogJoystickWithKeysLeft
+        or InputType.AnalogJoystickAndWithKeysUp
+        or InputType.AnalogJoystickAndWithKeysRight
+        or InputType.AnalogJoystickAndWithKeysDown
+        or InputType.AnalogJoystickAndWithKeysLeft
+        or InputType.AnalogJoystickWithDriftAndKeysUp
+        or InputType.AnalogJoystickWithDriftAndKeysRight
+        or InputType.AnalogJoystickWithDriftAndKeysDown
+        or InputType.AnalogJoystickWithDriftAndKeysLeft
+        or InputType.XInputJoystickAndKeys;
+
+    /// <summary>True when the stick is seen by the game as a gamepad axis.</summary>
+    internal static bool IsXInputStick(this InputType t) =>
+        t is InputType.XInputJoystick or InputType.XInputJoystickAndKeys;
+
     /// <summary>True when nothing is assigned -- the common filler in a profile.</summary>
     internal static bool IsEmpty(this InputType t) =>
         t is InputType.Unset or InputType.None or InputType.Disabled;
