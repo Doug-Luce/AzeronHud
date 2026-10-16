@@ -277,8 +277,10 @@ internal sealed class OverlayWindow : Window
             ? MathF.Max(8f, MathF.Min(ring.X, ring.Y) - (slot * 0.62f))
             : MathF.Min(size.X, size.Y) * 0.30f;
 
-        var offset = StickOffset(b) * baseRadius * 0.46f;
+        // Travel is whatever is left of the disc once the knob is accounted for,
+        // so the knob is contained by construction rather than by a magic factor.
         var knobRadius = baseRadius * 0.42f;
+        var offset = StickOffset(b) * (baseRadius - knobRadius);
         var active = offset.LengthSquared() > 0.0001f;
 
         draw.AddCircleFilled(centre, baseRadius, Palette.Of(col.StickBase, cfg.Opacity), 32);
@@ -305,35 +307,52 @@ internal sealed class OverlayWindow : Window
         draw.PopClipRect();
     }
 
+    /// <summary>FFXIV reports gamepad axes raw, roughly -99..99, not as a unit vector.</summary>
+    private const float GamepadAxisRange = 99f;
+
+    /// <summary>Enough to swallow a resting stick's drift without feeling laggy.</summary>
+    private const float StickDeadzone = 0.06f;
+
     /// <summary>
-    /// Where to put the knob, as a unit-ish vector. An XInput stick reports a
-    /// real axis, so use it; a key-emulating stick has no axis to read, but the
-    /// direction keys it sends are observable, so fake the deflection from
-    /// whichever are held.
+    /// Where to put the knob, as a vector of at most unit length. An XInput
+    /// stick reports a real axis, so use it; a key-emulating stick has no axis
+    /// to read, but the direction keys it sends are observable, so reconstruct
+    /// the deflection from whichever are held.
+    ///
+    /// The result is always clamped. The raw axis has no documented range, and
+    /// treating it as -1..1 threw the knob clean off the disc.
     /// </summary>
     private static Vector2 StickOffset(ResolvedButton b)
     {
+        Vector2 v;
+
         if (b.Type.IsXInputStick())
         {
             var axis = b.IsRightStick ? Plugin.Gamepad.RightStick : Plugin.Gamepad.LeftStick;
-            // The gamepad axis is already -1..1, with Y up.
-            return new Vector2(axis.X, -axis.Y);
+            v = new Vector2(axis.X, -axis.Y) / GamepadAxisRange;
+        }
+        else if (b.Directions != null)
+        {
+            v = Vector2.Zero;
+            foreach (var d in b.Directions)
+            {
+                if (!IsHeld(d))
+                    continue;
+
+                var angle = (float)d.Direction * MathF.PI / 4f;
+                v += new Vector2(MathF.Sin(angle), -MathF.Cos(angle));
+            }
+        }
+        else
+        {
+            return Vector2.Zero;
         }
 
-        if (b.Directions == null)
+        var length = v.Length();
+        if (length <= StickDeadzone || float.IsNaN(length))
             return Vector2.Zero;
 
-        var sum = Vector2.Zero;
-        foreach (var d in b.Directions)
-        {
-            if (!IsHeld(d))
-                continue;
-
-            var angle = (float)d.Direction * MathF.PI / 4f;
-            sum += new Vector2(MathF.Sin(angle), -MathF.Cos(angle));
-        }
-
-        return sum.LengthSquared() > 1f ? Vector2.Normalize(sum) : sum;
+        return length > 1f ? v / length : v;
     }
 
     private void DrawStickDirection(ImDrawListPtr draw, ResolvedButton d, Vector2 centre, float slot, float cell)

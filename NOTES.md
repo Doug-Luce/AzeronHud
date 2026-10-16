@@ -144,6 +144,20 @@ then two bare JSON numbers. Json.NET coerces them to `"0"`, which `KeyCodeMap`
 already treats as empty, but it means the DTO must be `List<string>` and not
 `List<object>`.
 
+## IGamepadState reports the raw axis, not a unit vector
+
+`IGamepadState.LeftStick` is documented only as "the left analogue sticks tilt
+vector" with no range given. It is the game's raw axis, roughly **-99..99**.
+Treating it as -1..1 threw the joystick knob about 99x too far: a modest tilt of
+25 produced a 460px offset on a 40px disc, so the knob slammed into the cell's
+clip rect and jittered with every twitch.
+
+Two defences, not one. The value is scaled by 1/99 and clamped to unit length
+*and* the knob's travel is defined as `baseRadius - knobRadius`, so the knob is
+contained by construction rather than by a magic factor -- a future wrong guess
+about the range saturates instead of escaping. A small deadzone swallows a
+resting stick's drift.
+
 ## Mini-hotbar state comes from the slot, not from ActionManager
 
 Three calls on `HotbarSlot`, signatures confirmed against the shipped
