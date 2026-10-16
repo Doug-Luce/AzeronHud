@@ -2,6 +2,16 @@ using Dalamud.Configuration;
 
 namespace AzeronHud;
 
+/// <summary>Where a label sits within its cell.</summary>
+public enum LabelAnchor
+{
+    Center = 0,
+    TopLeft = 1,
+    TopRight = 2,
+    BottomLeft = 3,
+    BottomRight = 4,
+}
+
 public sealed class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 1;
@@ -103,6 +113,19 @@ public sealed class Configuration : IPluginConfiguration
     public float IconScale = 0.68f;
     public bool ShowCooldown = true;
     public bool ShowCooldownNumerals = true;
+
+    /// <summary>Cooldown number size, as a fraction of the cell. Label size scales it too.</summary>
+    public float CooldownNumberScale = 0.34f;
+
+    /// <summary>Where in the cell the cooldown number sits.</summary>
+    public LabelAnchor CooldownNumberAnchor = LabelAnchor.Center;
+
+    /// <summary>
+    /// Outline the cooldown number, independently of the outline setting for
+    /// everything else -- it sits over the icon rather than over a panel, so
+    /// it often wants one when nothing else does.
+    /// </summary>
+    public bool OutlineCooldownNumbers = true;
     public bool DimUnusable = true;
 
     /// <summary>Light up a button when the game is highlighting its action -- a proc.</summary>

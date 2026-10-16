@@ -522,9 +522,10 @@ internal sealed class OverlayWindow : Window
     /// glyphs in the outline color at eight offsets first costs a few draw
     /// calls per label and makes them readable over any of it.
     /// </summary>
-    private void Label(ImDrawListPtr draw, float fontSize, Vector2 pos, uint color, string text)
+    private void Label(
+        ImDrawListPtr draw, float fontSize, Vector2 pos, uint color, string text, bool? outlined = null)
     {
-        if (cfg.ShowTextOutline)
+        if (outlined ?? cfg.ShowTextOutline)
         {
             // Four offsets, not eight. The diagonals only show on thin faces at
             // large sizes, and dropping them halves the draw calls -- with
@@ -550,6 +551,23 @@ internal sealed class OverlayWindow : Window
             return 0f;
 
         return MathF.Min(1f, (float)(remaining.TotalMilliseconds / 650d));
+    }
+
+    /// <summary>Top-left corner for a label of <paramref name="extent"/> at an anchor.</summary>
+    private static Vector2 Anchor(LabelAnchor anchor, Vector2 pos, Vector2 size, Vector2 extent, float cell)
+    {
+        var pad = cell * 0.06f;
+        var right = pos.X + size.X - extent.X - pad;
+        var bottom = pos.Y + size.Y - extent.Y - pad;
+
+        return anchor switch
+        {
+            LabelAnchor.TopLeft => new Vector2(pos.X + pad, pos.Y + pad),
+            LabelAnchor.TopRight => new Vector2(right, pos.Y + pad),
+            LabelAnchor.BottomLeft => new Vector2(pos.X + pad, bottom),
+            LabelAnchor.BottomRight => new Vector2(right, bottom),
+            _ => pos + ((size - extent) / 2f),
+        };
     }
 
     /// <summary>A label's size, as a fraction of the cell, after the user's scale.</summary>
@@ -664,12 +682,13 @@ internal sealed class OverlayWindow : Window
         if (!cfg.ShowCooldownNumerals || b.CooldownSeconds <= 0)
             return;
 
-        var centre = pos + (size / 2f);
-
         var text = b.CooldownSeconds.ToString();
-        var fontSize = LabelSize(cell, 0.34f);
+        var fontSize = LabelSize(cell, cfg.CooldownNumberScale);
         var extent = ImGui.CalcTextSize(text) * (fontSize / ImGui.GetFontSize());
-        Label(draw, fontSize, centre - (extent / 2f), Palette.Of(col.TextTitle, opacity), text);
+
+        Label(draw, fontSize,
+            Anchor(cfg.CooldownNumberAnchor, pos, size, extent, cell),
+            Palette.Of(col.TextCooldown, opacity), text, cfg.OutlineCooldownNumbers);
     }
 
     private void DrawText(ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell)

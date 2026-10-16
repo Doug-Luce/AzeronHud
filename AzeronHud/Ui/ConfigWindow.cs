@@ -85,14 +85,15 @@ internal sealed class ConfigWindow : Window
 
         var all = profiles();
         var current = cfg.ProfileId.Length == 0
-            ? "Auto (most recently saved)"
+            ? "Auto (follow the Azeron app)"
             : FindName(all, cfg.ProfileId);
 
         ImGui.TextUnformatted("Profile");
+        ImGui.TextDisabled("Auto uses whichever profile the Azeron app has linked to FFXIV.");
         ImGui.SetNextItemWidth(-1);
         if (ImGui.BeginCombo("##profile", current))
         {
-            if (ImGui.Selectable("Auto (most recently saved)", cfg.ProfileId.Length == 0))
+            if (ImGui.Selectable("Auto (follow the Azeron app)", cfg.ProfileId.Length == 0))
             {
                 cfg.ProfileId = string.Empty;
                 cfg.Save();
@@ -280,6 +281,43 @@ internal sealed class ConfigWindow : Window
         Toggle("Dark outline behind text", ref cfg.ShowTextOutline);
         Toggle("Cooldown sweep", ref cfg.ShowCooldown);
         Toggle("Cooldown seconds", ref cfg.ShowCooldownNumerals);
+
+        using (ImRaii.Disabled(!cfg.ShowCooldownNumerals))
+        {
+            ImGui.Indent();
+
+            var cdScale = cfg.CooldownNumberScale;
+            ImGui.SetNextItemWidth(220);
+            if (ImGui.SliderFloat("Size##cooldown", ref cdScale, 0.12f, 0.7f, "%.2f"))
+            {
+                cfg.CooldownNumberScale = cdScale;
+                cfg.Save();
+            }
+
+            ImGui.SetNextItemWidth(220);
+            if (ImGui.BeginCombo("Position##cooldown", AnchorName(cfg.CooldownNumberAnchor)))
+            {
+                foreach (var a in new[]
+                         {
+                             LabelAnchor.Center, LabelAnchor.TopLeft, LabelAnchor.TopRight,
+                             LabelAnchor.BottomLeft, LabelAnchor.BottomRight,
+                         })
+                {
+                    if (ImGui.Selectable(AnchorName(a), a == cfg.CooldownNumberAnchor))
+                    {
+                        cfg.CooldownNumberAnchor = a;
+                        cfg.Save();
+                    }
+                }
+
+                ImGui.EndCombo();
+            }
+
+            Toggle("Outline##cooldown", ref cfg.OutlineCooldownNumbers);
+            ImGui.TextDisabled("Corners already hold the key, charges and cost.");
+
+            ImGui.Unindent();
+        }
         Toggle("Dim unusable actions", ref cfg.DimUnusable);
         Toggle("Highlight procs", ref cfg.ShowProcGlow);
         Toggle("Tint when out of range", ref cfg.ShowRangeTint);
@@ -302,6 +340,9 @@ internal sealed class ConfigWindow : Window
             cfg.ShowChord = d.ShowChord;
             cfg.ShowCooldown = d.ShowCooldown;
             cfg.ShowCooldownNumerals = d.ShowCooldownNumerals;
+            cfg.CooldownNumberScale = d.CooldownNumberScale;
+            cfg.CooldownNumberAnchor = d.CooldownNumberAnchor;
+            cfg.OutlineCooldownNumbers = d.OutlineCooldownNumbers;
             cfg.DimUnusable = d.DimUnusable;
             cfg.ShowProcGlow = d.ShowProcGlow;
             cfg.ShowRangeTint = d.ShowRangeTint;
@@ -360,6 +401,7 @@ internal sealed class ConfigWindow : Window
             Color("Key", ref c.TextKey);
             Color("Cost", ref c.TextCost);
             Color("Charges", ref c.TextCharges);
+            Color("Cooldown seconds", ref c.TextCooldown);
             Color("Button number", ref c.TextButtonNumber);
             Color("Text outline", ref c.TextOutline);
             Color("Long/double-press dots", ref c.Pip);
@@ -522,6 +564,15 @@ internal sealed class ConfigWindow : Window
         if (ImGui.Button("Cancel"))
             pendingReset = null;
     }
+
+    private static string AnchorName(LabelAnchor a) => a switch
+    {
+        LabelAnchor.TopLeft => "Top left",
+        LabelAnchor.TopRight => "Top right",
+        LabelAnchor.BottomLeft => "Bottom left",
+        LabelAnchor.BottomRight => "Bottom right",
+        _ => "Center",
+    };
 
     private void Toggle(string label, ref bool value)
     {

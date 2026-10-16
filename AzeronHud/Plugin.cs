@@ -136,9 +136,8 @@ public sealed class Plugin : IDalamudPlugin
                 return;
             }
 
-            active = cfg.ProfileId.Length > 0
-                ? discovered.FirstOrDefault(p => p.Id == cfg.ProfileId) ?? discovered[0]
-                : discovered[0];
+            var (chosen, why) = PickProfile(discovered);
+            active = chosen;
 
             if (layout == null)
             {
@@ -151,7 +150,7 @@ public sealed class Plugin : IDalamudPlugin
 
             var present = active.Inputs.Count(i => i.IsPresent);
             statusText =
-                $"\"{active.Name}\" on {layout.Name}: {present} buttons, "
+                $"\"{active.Name}\" ({why}) on {layout.Name}: {present} buttons, "
                 + $"{keybinds.BoundCount} FFXIV keybinds indexed.";
             Log.Information(statusText);
         }
@@ -197,6 +196,42 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         return picked;
+    }
+
+    /// <summary>
+    /// Which Azeron profile to read, and why -- the reason goes in the status
+    /// line so a surprising choice is visible rather than silently wrong.
+    ///
+    /// The Azeron app records which profile it switches to for a given game,
+    /// so ask it. Falling back to "most recently saved" would show another
+    /// game's bindings the moment you edited that game's profile last.
+    /// </summary>
+    private (AzeronProfile Profile, string Why) PickProfile(IReadOnlyList<AzeronProfile> all)
+    {
+        if (cfg.ProfileId.Length > 0)
+        {
+            var pinned = all.FirstOrDefault(p => p.Id == cfg.ProfileId);
+            if (pinned != null)
+                return (pinned, "chosen in settings");
+        }
+
+        var state = AzeronAppState.Read(store.Root, "ffxiv");
+
+        if (state.ProfileLinkedToGame != null)
+        {
+            var linked = all.FirstOrDefault(p => p.Id == state.ProfileLinkedToGame);
+            if (linked != null)
+                return (linked, "linked to FFXIV in the Azeron app");
+        }
+
+        if (state.LastUsedProfile != null)
+        {
+            var lastUsed = all.FirstOrDefault(p => p.Id == state.LastUsedProfile);
+            if (lastUsed != null)
+                return (lastUsed, "last used in the Azeron app");
+        }
+
+        return (all[0], "most recently saved");
     }
 
     private void RebuildKeybinds()
