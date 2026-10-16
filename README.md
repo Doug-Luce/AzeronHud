@@ -20,9 +20,23 @@ The thumbstick is drawn as a stick, and the knob follows your thumb.
 
 ![Cooldowns running, with the stick deflected](images/screenshot-2.png)
 
+## Installing
+
+Add this to Dalamud's plugin repositories — `/xlsettings` → **Experimental** → **Custom Plugin
+Repositories**:
+
+```
+https://raw.githubusercontent.com/Doug-Luce/AzeronHud/main/repo.json
+```
+
+Save, then find **Azeron HUD** in `/xlplugins` and install it. Updates come through the same way.
+
+If you'd rather install it by hand, every release has a `latest.zip` on the
+[releases page](https://github.com/Doug-Luce/AzeronHud/releases/latest).
+
 ## Setting it up
 
-Install it, then type `/azeronhud`. That's usually all there is to it — the plugin finds Azeron Software's
+Type `/azeronhud`. That's usually all there is to it — the plugin finds Azeron Software's
 settings on its own and reads whichever profile the app has linked to FFXIV.
 
 **Your keypad doesn't need to be plugged in.** The plugin reads your saved profile, not the device.
