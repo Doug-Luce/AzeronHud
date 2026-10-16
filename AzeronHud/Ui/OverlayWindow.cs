@@ -505,18 +505,17 @@ internal sealed class OverlayWindow : Window
     {
         if (cfg.ShowTextOutline)
         {
+            // Four offsets, not eight. The diagonals only show on thin faces at
+            // large sizes, and dropping them halves the draw calls -- with
+            // everything on screen that is ~500 fewer AddText per frame.
             var o = MathF.Max(1f, fontSize * 0.09f);
             var outline = Palette.Of(cfg.Colors.TextOutline, opacity);
             var font = ImGui.GetFont();
 
-            for (var dx = -1; dx <= 1; dx++)
-            for (var dy = -1; dy <= 1; dy++)
-            {
-                if (dx == 0 && dy == 0)
-                    continue;
-
-                draw.AddText(font, fontSize, pos + new Vector2(dx * o, dy * o), outline, text);
-            }
+            draw.AddText(font, fontSize, pos + new Vector2(-o, 0), outline, text);
+            draw.AddText(font, fontSize, pos + new Vector2(o, 0), outline, text);
+            draw.AddText(font, fontSize, pos + new Vector2(0, -o), outline, text);
+            draw.AddText(font, fontSize, pos + new Vector2(0, o), outline, text);
         }
 
         draw.AddText(ImGui.GetFont(), fontSize, pos, color, text);

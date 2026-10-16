@@ -415,9 +415,9 @@ internal sealed class ConfigWindow : Window
         ImGui.Spacing();
         ImGui.TextWrapped(
             "The hotkey is read from the game's own key state, so it only fires while the game "
-            + "window has focus and you're not typing. A neat trick: bind a spare Azeron button "
-            + "to F13-F24 in the Azeron app and use that here -- the keypad then toggles its own "
-            + "HUD, and FFXIV ignores the key entirely.");
+            + "window has focus, and it is ignored while you're typing in chat or a search box. "
+            + "A neat trick: bind a spare Azeron button to F13-F24 in the Azeron app and use that "
+            + "here -- the keypad then toggles its own HUD, and FFXIV ignores the key entirely.");
 
         ImGui.Spacing();
         ImGui.Separator();

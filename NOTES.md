@@ -230,6 +230,15 @@ helpers apply their own alpha multipliers.
 `IsItemDeactivatedAfterEdit()`; saving per frame would rewrite the config file
 continuously while the user drags a picker.
 
+## IKeyState keeps reporting keys while you type
+
+The game fills its key-state array regardless of whether a text field has
+focus, so a hotkey polled from `IKeyState` fires while you are typing in chat.
+A hotkey of M toggled the HUD on every M you sent to someone.
+
+`RaptureAtkModule.Instance()->AtkModule.IsTextInputActive()` is the guard, and
+covers search boxes as well as chat.
+
 ## Draw-list colors don't see ImGui's style alpha
 
 `ImGuiStyleVar.Alpha` only reaches widgets that resolve their color through

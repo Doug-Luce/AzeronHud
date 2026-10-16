@@ -253,11 +253,20 @@ public sealed class Plugin : IDalamudPlugin
         if (!KeyState.IsVirtualKeyValid(key))
             return;
 
-        var down = KeyState[key] && ModifiersHeld();
+        // IKeyState reads the game's key array, which the game keeps filling
+        // while you type in chat or a search box -- so without this, a hotkey
+        // of M toggles the HUD every time you type the letter M to someone.
+        var down = KeyState[key] && ModifiersHeld() && !IsTypingInGame();
         if (down && !hotkeyWasDown)
             ToggleOverlay();
 
         hotkeyWasDown = down;
+    }
+
+    private static unsafe bool IsTypingInGame()
+    {
+        var atk = FFXIVClientStructs.FFXIV.Client.UI.RaptureAtkModule.Instance();
+        return atk != null && atk->AtkModule.IsTextInputActive();
     }
 
     private bool ModifiersHeld()
