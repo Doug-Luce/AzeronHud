@@ -145,14 +145,16 @@ internal sealed unsafe class ButtonResolver
 
         if (keybinds.TryHotbar(id, out var href))
         {
+            // Watch the slot either way. An empty slot can be filled later --
+            // by a job change, or by dragging an action onto the bar -- and if
+            // we stopped watching it we would never notice.
+            hotbarBacked.Add((b, href));
+
             b.Tier = ResolutionTier.HotbarSlot;
             if (FillFromHotbar(b, href))
-            {
-                hotbarBacked.Add((b, href));
                 return;
-            }
 
-            // Bound to a slot, but the slot is empty on this job.
+            // Bound to a slot that is empty right now.
         }
 
         b.Tier = ResolutionTier.Keybind;
@@ -348,8 +350,14 @@ internal sealed unsafe class ButtonResolver
             if (slot == null)
                 continue;
 
-            var icon = slot->GetIconIdForSlot(slot->ApparentSlotType, slot->ApparentActionId);
-            if (icon > 0 && (uint)icon != cell.IconId)
+            // Compare unconditionally, including against zero: a slot emptying
+            // matters as much as one being filled, and an earlier version that
+            // skipped icon == 0 could never see a bar being cleared.
+            var icon = slot->IsEmpty
+                ? 0u
+                : (uint)slot->GetIconIdForSlot(slot->ApparentSlotType, slot->ApparentActionId);
+
+            if (icon != cell.IconId)
                 return true;
         }
 

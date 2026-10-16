@@ -25,6 +25,13 @@ public sealed class Plugin : IDalamudPlugin
     /// <summary>How often to re-read hotbar contents (job swaps, page changes, upgrades).</summary>
     private static readonly TimeSpan StructurePollInterval = TimeSpan.FromMilliseconds(250);
 
+    /// <summary>
+    /// How often to check whether the keybind table changed. Rebinding mid-session
+    /// is rare, and the check is a hash over a few hundred entries, so this can be
+    /// slow without the HUD ever being noticeably wrong.
+    /// </summary>
+    private static readonly TimeSpan KeybindPollInterval = TimeSpan.FromSeconds(3);
+
     [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
@@ -52,6 +59,8 @@ public sealed class Plugin : IDalamudPlugin
     private string statusText = "Not loaded yet.";
 
     private DateTime lastStructurePoll = DateTime.MinValue;
+    private DateTime lastKeybindPoll = DateTime.MinValue;
+    private ulong keybindSignature;
     private bool keybindsBuilt;
     private bool hotkeyWasDown;
 
@@ -84,6 +93,11 @@ public sealed class Plugin : IDalamudPlugin
 
         Framework.Update += OnUpdate;
         ClientState.Login += OnLogin;
+        ClientState.Logout += OnLogout;
+
+        // Changing job reloads every hotbar, so the icons, names and even which
+        // buttons resolve at all are different afterwards.
+        ClientState.ClassJobChanged += OnClassJobChanged;
 
         Reload();
     }
@@ -151,6 +165,7 @@ public sealed class Plugin : IDalamudPlugin
 
         keybinds.Rebuild();
         keybinds.LoadNames(Data.GetExcelSheet<Lumina.Excel.Sheets.ConfigKey>());
+        keybindSignature = keybinds.Signature();
         keybindsBuilt = true;
 
         Log.Debug($"Indexed {keybinds.BoundCount} keybinds, {keybinds.NamedCount} with display names.");
@@ -160,6 +175,14 @@ public sealed class Plugin : IDalamudPlugin
     {
         keybindsBuilt = false;
         resolutionDisabled = false;
+    }
+
+    private void OnLogout(int type, int code) => keybindsBuilt = false;
+
+    private void OnClassJobChanged(uint classJobId)
+    {
+        if (ClientState.IsLoggedIn)
+            resolver.Rebuild(active, layout);
     }
 
     // --- per-frame ----------------------------------------------------------
@@ -185,6 +208,20 @@ public sealed class Plugin : IDalamudPlugin
                 Reload();
 
             var now = DateTime.UtcNow;
+
+            // A rebind in game changes which FFXIV action a button maps to, and
+            // nothing else would ever tell us.
+            if (now - lastKeybindPoll >= KeybindPollInterval)
+            {
+                lastKeybindPoll = now;
+                var signature = keybinds.Signature();
+                if (signature != 0 && signature != keybindSignature)
+                {
+                    RebuildKeybinds();
+                    resolver.Rebuild(active, layout);
+                }
+            }
+
             if (now - lastStructurePoll >= StructurePollInterval)
             {
                 lastStructurePoll = now;
@@ -199,6 +236,7 @@ public sealed class Plugin : IDalamudPlugin
             // Once, then stop -- a throw every frame would bury the log and the
             // game's own UI thread does not want our exceptions.
             resolutionDisabled = true;
+            statusText = $"Stopped updating after an error: {ex.Message}. /azeronhud reload to retry.";
             Log.Error(ex, "Azeron HUD update failed; resolution disabled until reload");
         }
     }
@@ -309,6 +347,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        ClientState.ClassJobChanged -= OnClassJobChanged;
+        ClientState.Logout -= OnLogout;
         ClientState.Login -= OnLogin;
         Framework.Update -= OnUpdate;
         Commands.RemoveHandler(ShortCommand);

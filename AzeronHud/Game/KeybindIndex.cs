@@ -28,6 +28,38 @@ internal sealed unsafe class KeybindIndex
     internal int BoundCount { get; private set; }
     internal int NamedCount => friendlyNames.Count;
 
+    /// <summary>
+    /// Cheap hash of the whole keybind table, for spotting a rebind made in
+    /// game. Rebuilding on a timer would be wasteful and rebuilding never
+    /// leaves the HUD quietly wrong, so poll this instead.
+    /// </summary>
+    internal ulong Signature()
+    {
+        var input = UIInputData.Instance();
+        if (input == null)
+            return 0;
+
+        // FNV-1a over the key settings. The span is a few hundred entries of
+        // two bytes each -- trivial next to anything else in a frame.
+        var hash = 14695981039346656037UL;
+        var span = input->GetKeybindSpan();
+
+        unchecked
+        {
+            hash = (hash ^ (ulong)span.Length) * 1099511628211UL;
+            foreach (ref readonly var keybind in span)
+            {
+                foreach (ref readonly var setting in keybind.KeySettings)
+                {
+                    hash = (hash ^ (byte)setting.Key) * 1099511628211UL;
+                    hash = (hash ^ (byte)setting.KeyModifier) * 1099511628211UL;
+                }
+            }
+        }
+
+        return hash;
+    }
+
     /// <summary>Re-read the whole keybind table. Cheap enough to run on demand, not per frame.</summary>
     internal void Rebuild()
     {
