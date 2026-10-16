@@ -37,6 +37,14 @@ internal sealed class OverlayWindow : Window
     /// <summary>Scratch for the wrapped action name. Reused; drawing is single-threaded.</summary>
     private readonly List<string> titleLines = new();
 
+    /// <summary>Last frame's grid extent, so a fit request knows what to snap to.</summary>
+    private Vector2 lastGrid;
+
+    /// <summary>Grid shape last drawn, for noticing when hiding buttons reshapes it.</summary>
+    private (int Columns, int Rows) lastShape;
+
+    private bool fitRequested;
+
     internal OverlayWindow(
         Configuration cfg,
         Func<DeviceLayout?> layout,
@@ -116,8 +124,23 @@ internal sealed class OverlayWindow : Window
         return b.Tier != ResolutionTier.Empty || cfg.ShowEmptyButtons;
     }
 
+    /// <summary>Snap the window to the keypad on the next frame.</summary>
+    internal void RequestFit() => fitRequested = true;
+
     public override void PreDraw()
     {
+        // A HUD has no reason to reserve a frame around itself, so this
+        // defaults to nothing. Pushed here and popped in PostDraw, which is
+        // where Dalamud brackets the window's Begin/End.
+        var padding = MathF.Max(0f, cfg.WindowPadding) * ImGuiHelpers.GlobalScale;
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, new Vector2(padding));
+
+        if (fitRequested && lastGrid.X > 1f)
+        {
+            ImGui.SetNextWindowSize(lastGrid + new Vector2(padding * 2f));
+            fitRequested = false;
+        }
+
         Flags = ImGuiWindowFlags.NoTitleBar
                 | ImGuiWindowFlags.NoScrollbar
                 | ImGuiWindowFlags.NoScrollWithMouse
@@ -162,6 +185,8 @@ internal sealed class OverlayWindow : Window
         IsClickthrough = cfg.Locked;
         BgAlpha = opacity * 0.5f;
     }
+
+    public override void PostDraw() => ImGui.PopStyleVar();
 
     public override void Draw()
     {
@@ -227,6 +252,17 @@ internal sealed class OverlayWindow : Window
             MathF.Max(0f, (avail.Y - grid.Y) / 2f));
 
         var draw = ImGui.GetWindowDrawList();
+
+        lastGrid = grid;
+        if (cfg.AutoFitWindow && lastShape != (columns, rows))
+        {
+            // Hiding buttons can reshape the grid entirely; without this the
+            // window keeps its old proportions and letterboxes the result.
+            if (lastShape != default)
+                fitRequested = true;
+
+            lastShape = (columns, rows);
+        }
 
         foreach (var lb in visible)
         {

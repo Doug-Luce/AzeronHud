@@ -16,6 +16,7 @@ internal sealed class ConfigWindow : Window
     private readonly Action reload;
     private readonly Func<IReadOnlyList<AzeronProfile>> profiles;
     private readonly Func<string> status;
+    private readonly Action fitWindow;
 
     private bool capturingHotkey;
 
@@ -26,9 +27,11 @@ internal sealed class ConfigWindow : Window
         Configuration cfg,
         Action reload,
         Func<IReadOnlyList<AzeronProfile>> profiles,
-        Func<string> status)
+        Func<string> status,
+        Action fitWindow)
         : base("Azeron HUD settings###AzeronHudConfig")
     {
+        this.fitWindow = fitWindow;
         this.cfg = cfg;
         this.reload = reload;
         this.profiles = profiles;
@@ -213,6 +216,13 @@ internal sealed class ConfigWindow : Window
             cfg.Save();
         }
 
+        var pad = cfg.WindowPadding;
+        if (ImGui.SliderFloat("Window padding", ref pad, 0f, 16f, "%.0f px"))
+        {
+            cfg.WindowPadding = pad;
+            cfg.Save();
+        }
+
         var rounding = cfg.Rounding;
         if (ImGui.SliderFloat("Corner rounding", ref rounding, 0f, 16f, "%.0f"))
         {
@@ -221,12 +231,20 @@ internal sealed class ConfigWindow : Window
         }
 
         ImGui.Spacing();
+        if (ImGui.Button("Fit window to keypad"))
+            fitWindow();
+
+        ImGui.SameLine();
+        Toggle("automatically", ref cfg.AutoFitWindow);
+        ImGui.TextDisabled("The keypad keeps its proportions, so a window of another shape\nleaves an empty band. Fitting removes it.");
+
+        ImGui.Spacing();
         Toggle("Panel behind the whole HUD", ref cfg.ShowWindowBackground);
         Toggle("Panel behind each button", ref cfg.ShowButtonPanels);
 
         ImGui.Spacing();
         var locked = cfg.Locked;
-        if (ImGui.Checkbox("Lock (ignore the mouse entirely)", ref locked))
+        if (ImGui.Checkbox("Click-through (locks position, ignores the mouse)", ref locked))
         {
             cfg.Locked = locked;
             cfg.Save();
@@ -249,6 +267,8 @@ internal sealed class ConfigWindow : Window
             cfg.GapRatio = d.GapRatio;
             cfg.Opacity = d.Opacity;
             cfg.Rounding = d.Rounding;
+            cfg.WindowPadding = d.WindowPadding;
+            cfg.AutoFitWindow = d.AutoFitWindow;
             cfg.ShowWindowBackground = d.ShowWindowBackground;
             cfg.ShowButtonPanels = d.ShowButtonPanels;
             cfg.Locked = d.Locked;

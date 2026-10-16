@@ -75,7 +75,8 @@ public sealed class Plugin : IDalamudPlugin
         resolver = new ButtonResolver(keybinds);
 
         overlay = new OverlayWindow(cfg, () => layout, () => resolver, () => statusText);
-        configWindow = new ConfigWindow(cfg, Reload, () => discovered, () => statusText);
+        configWindow = new ConfigWindow(
+            cfg, Reload, () => discovered, () => statusText, overlay.RequestFit);
         windows.AddWindow(overlay);
         windows.AddWindow(configWindow);
 
@@ -85,7 +86,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Commands.AddHandler(Command, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the Azeron keypad HUD. Also: config, reload, lock, dump.",
+            HelpMessage = "Toggle the Azeron keypad HUD. Also: config, reload, lock, fit, dump.",
         });
         Commands.AddHandler(ShortCommand, new CommandInfo(OnCommand)
         {
@@ -380,16 +381,19 @@ public sealed class Plugin : IDalamudPlugin
                 Reload();
                 Chat.Print($"[Azeron HUD] {statusText}");
                 break;
-            case "lock":
+            case "fit":
+                overlay.RequestFit();
+                break;
+            case "lock" or "clickthrough":
                 cfg.Locked = !cfg.Locked;
                 cfg.Save();
-                Chat.Print($"[Azeron HUD] {(cfg.Locked ? "locked" : "unlocked")}.");
+                Chat.Print($"[Azeron HUD] click-through {(cfg.Locked ? "on" : "off")}.");
                 break;
             case "dump":
                 Dump();
                 break;
             default:
-                Chat.Print("[Azeron HUD] Usage: /azeronhud [config|reload|lock|dump]");
+                Chat.Print("[Azeron HUD] Usage: /azeronhud [config|reload|lock|fit|dump]");
                 break;
         }
     }

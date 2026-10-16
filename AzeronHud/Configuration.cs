@@ -62,6 +62,18 @@ public sealed class Configuration : IPluginConfiguration
 
     public float Rounding = 6f;
 
+    /// <summary>
+    /// Border between the keypad and the window edge. Zero by default -- a HUD
+    /// has no reason to reserve a frame around itself.
+    /// </summary>
+    public float WindowPadding;
+
+    /// <summary>
+    /// Snap the window to the keypad whenever the grid changes shape, so
+    /// hiding buttons doesn't leave a band of empty window behind.
+    /// </summary>
+    public bool AutoFitWindow = true;
+
     /// <summary>The panel behind the whole HUD. Off leaves the buttons floating.</summary>
     public bool ShowWindowBackground = true;
 
