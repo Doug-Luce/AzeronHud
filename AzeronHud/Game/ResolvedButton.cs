@@ -4,6 +4,19 @@ using AzeronHud.Azeron;
 
 namespace AzeronHud.Game;
 
+/// <summary>Whether an action shares the global cooldown.</summary>
+internal enum ActionKind
+{
+    /// <summary>Not an action, or not one we can classify.</summary>
+    Unknown,
+
+    /// <summary>A weaponskill or spell: it runs on the GCD.</summary>
+    Gcd,
+
+    /// <summary>An ability: it has its own recast and is used between GCDs.</summary>
+    OffGcd,
+}
+
 /// <summary>How much we managed to learn about a button, best first.</summary>
 internal enum ResolutionTier
 {
@@ -78,6 +91,9 @@ internal sealed class ResolvedButton
     internal string? InputIdName;
 
     internal InputType Type;
+
+    /// <summary>Whether this is on the GCD, so the pad can be read as rhythm.</summary>
+    internal ActionKind Kind;
 
     /// <summary>Set on a thumbstick cell, so the overlay draws it as a joystick.</summary>
     internal bool IsStick;

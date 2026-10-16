@@ -49,6 +49,18 @@ public sealed class ColorSet
     public Vector4 KeyHeld = new(1.00f, 0.84f, 0.38f, 1.00f);
 
     /// <summary>
+    /// Marks a button whose action runs on the global cooldown, so the pad
+    /// reads as rhythm rather than as a list.
+    /// </summary>
+    public Vector4 GcdMark = new(0.46f, 0.68f, 0.95f, 0.95f);
+
+    /// <summary>
+    /// The same for abilities. Transparent by default: marking only the GCDs
+    /// is enough to see the shape, and marking everything is just noise.
+    /// </summary>
+    public Vector4 OffGcdMark = new(0.95f, 0.72f, 0.42f, 0.00f);
+
+    /// <summary>
     /// Brief pulse when a long cooldown finishes. Deliberately not the proc
     /// amber -- "it came back" and "it procced" are different events.
     /// </summary>

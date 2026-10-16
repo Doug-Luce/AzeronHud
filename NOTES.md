@@ -192,6 +192,23 @@ pet bar is actually up.
 Note `PetHotbarActive` exists in the binary but is **not** on
 `RaptureHotbarModule` -- don't reach for it there.
 
+## GCD vs off-GCD comes from the Action sheet, not the slot
+
+Cooldown group **58** is the global cooldown; `Action.CooldownGroup` and
+`Action.AdditionalCooldownGroup` are both `byte` and either may carry it.
+
+Only the Action sheet has this, so item, macro, emote, mount and gear-set slots
+stay `ActionKind.Unknown` and are left unmarked. A macro may well fire a GCD,
+but we cannot know that, and guessing would put a confident mark on something
+we have not established.
+
+The mark is a bar along the **top edge**. Every other part of a cell is already
+spoken for — the four corners hold the key, charges, cost and button number,
+the middle holds the icon, the foot holds the name — and border weight is
+already carrying pressed, proc and cooldown-finished. Abilities are unmarked by
+default: marking only the GCDs is enough to see the shape of a rotation, and
+marking everything is noise.
+
 ## Mini-hotbar state comes from the slot, not from ActionManager
 
 Three calls on `HotbarSlot`, signatures confirmed against the shipped

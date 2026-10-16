@@ -271,6 +271,9 @@ internal sealed class OverlayWindow : Window
             DrawIcon(draw, b, pos, size, opacity, col.IconUnusable, cfg.IconScale, strip);
         }
 
+        if (cfg.ShowGcdMark)
+            DrawGcdMark(draw, b, pos, size, cell, rounding);
+
         if (cfg.ShowCooldown && b.CooldownPct > 0f)
             DrawCooldown(draw, b, pos, size, cell);
 
@@ -551,6 +554,34 @@ internal sealed class OverlayWindow : Window
             return 0f;
 
         return MathF.Min(1f, (float)(remaining.TotalMilliseconds / 650d));
+    }
+
+    /// <summary>
+    /// A thin bar along the top edge marking whether the action runs on the
+    /// global cooldown.
+    ///
+    /// The top edge because every other part of the cell is spoken for -- the
+    /// corners hold the key, charges, cost and button number, the middle holds
+    /// the icon, the foot holds the name -- and because border weight is
+    /// already carrying pressed, proc and cooldown-finished.
+    /// </summary>
+    private void DrawGcdMark(
+        ImDrawListPtr draw, ResolvedButton b, Vector2 pos, Vector2 size, float cell, float rounding)
+    {
+        if (b.Kind == ActionKind.Unknown)
+            return;
+
+        var color = b.Kind == ActionKind.Gcd ? cfg.Colors.GcdMark : cfg.Colors.OffGcdMark;
+        if (color.W <= 0f)
+            return;
+
+        var thickness = MathF.Max(1.5f, cell * 0.045f);
+        var inset = rounding * 0.6f;
+
+        draw.AddRectFilled(
+            new Vector2(pos.X + inset, pos.Y),
+            new Vector2(pos.X + size.X - inset, pos.Y + thickness),
+            Palette.Of(color, opacity));
     }
 
     /// <summary>Top-left corner for a label of <paramref name="extent"/> at an anchor.</summary>

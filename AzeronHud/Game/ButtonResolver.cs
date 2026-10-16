@@ -18,6 +18,9 @@ namespace AzeronHud.Game;
 /// </summary>
 internal sealed unsafe class ButtonResolver
 {
+    /// <summary>The cooldown group every weaponskill and spell shares.</summary>
+    private const byte GlobalCooldownGroup = 58;
+
     /// <summary>Longer than a GCD, so routine recasts don't make the HUD strobe.</summary>
     private const int MinimumFlashCooldownSeconds = 3;
 
@@ -302,6 +305,8 @@ internal sealed unsafe class ButtonResolver
         var icon = slot->GetIconIdForSlot(type, action);
         b.IconId = icon > 0 ? (uint)icon : 0u;
 
+        b.Kind = ClassifyAction(type, action);
+
         var name = slot->GetDisplayNameForSlot(type, action);
         if (name.HasValue)
         {
@@ -385,6 +390,30 @@ internal sealed unsafe class ButtonResolver
             cell.ReadyFlashUntil = DateTime.UtcNow + ReadyFlashDuration;
 
         cell.PeakCooldownSeconds = 0;
+    }
+
+    /// <summary>
+    /// Whether a slot's action runs on the global cooldown.
+    ///
+    /// Cooldown group 58 is the GCD. Only the Action sheet carries that, so
+    /// items, macros, emotes and the rest stay Unknown rather than being
+    /// guessed at -- a macro may well fire a GCD, but we cannot know.
+    /// </summary>
+    private static ActionKind ClassifyAction(RaptureHotbarModule.HotbarSlotType type, uint actionId)
+    {
+        if (type is not (RaptureHotbarModule.HotbarSlotType.Action
+            or RaptureHotbarModule.HotbarSlotType.CraftAction
+            or RaptureHotbarModule.HotbarSlotType.PvPCombo))
+            return ActionKind.Unknown;
+
+        var sheet = Plugin.Data.GetExcelSheet<Lumina.Excel.Sheets.Action>();
+        if (sheet == null || !sheet.TryGetRow(actionId, out var row))
+            return ActionKind.Unknown;
+
+        return row.CooldownGroup == GlobalCooldownGroup
+               || row.AdditionalCooldownGroup == GlobalCooldownGroup
+            ? ActionKind.Gcd
+            : ActionKind.OffGcd;
     }
 
     /// <summary>Null-terminated UTF-8 out of the slot's fixed buffer.</summary>

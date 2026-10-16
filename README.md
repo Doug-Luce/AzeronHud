@@ -20,6 +20,10 @@ resolves like any other button, with the diagonals appearing only when eight-dir
 XInput the game sees a gamepad axis rather than a keystroke, so the HUD names the stick instead of
 guessing at a binding.
 
+Buttons whose action runs on the **global cooldown** get a bar along the top edge, so the pad reads as
+rhythm rather than as a list — GCDs in one place, abilities in another. Abilities are unmarked by
+default; give them a color under Colors to mark both.
+
 Buttons the game can't see — mouse clicks, XInput, macros, the scroll wheel — say what they are rather
 than silently going blank.
 

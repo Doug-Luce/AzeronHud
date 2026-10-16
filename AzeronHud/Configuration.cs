@@ -139,6 +139,9 @@ public sealed class Configuration : IPluginConfiguration
 
     /// <summary>Brief pulse when a cooldown longer than a GCD comes back up.</summary>
     public bool ShowReadyFlash = true;
+
+    /// <summary>Mark which buttons run on the global cooldown.</summary>
+    public bool ShowGcdMark = true;
     public bool ShowEmptyButtons = true;
     public bool ShowSecondaryPips = true;
 

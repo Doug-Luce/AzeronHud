@@ -324,6 +324,8 @@ internal sealed class ConfigWindow : Window
         Toggle("MP / item cost", ref cfg.ShowCost);
         Toggle("Highlight the key being held", ref cfg.HighlightPressed);
         Toggle("Flash when a cooldown finishes", ref cfg.ShowReadyFlash);
+        Toggle("Mark actions on the global cooldown", ref cfg.ShowGcdMark);
+        ImGui.TextDisabled("A bar along the top edge. Abilities are unmarked by default;\ngive them a color under Colors to mark both.");
 
         ImGui.Spacing();
         Toggle("Only buttons bound to a hotbar action", ref cfg.OnlyHotbarActions);
@@ -352,6 +354,7 @@ internal sealed class ConfigWindow : Window
             cfg.ShowTextOutline = d.ShowTextOutline;
             cfg.ShowButtonNumbers = d.ShowButtonNumbers;
             cfg.ShowReadyFlash = d.ShowReadyFlash;
+            cfg.ShowGcdMark = d.ShowGcdMark;
             cfg.OnlyHotbarActions = d.OnlyHotbarActions;
             cfg.HighlightPressed = d.HighlightPressed;
             cfg.ShowEmptyButtons = d.ShowEmptyButtons;
@@ -392,6 +395,8 @@ internal sealed class ConfigWindow : Window
             Color("Proc wash", ref c.ProcGlow);
             Color("Key held", ref c.KeyHeld);
             Color("Cooldown finished", ref c.ReadyFlash);
+            Color("On the global cooldown", ref c.GcdMark);
+            Color("Off the global cooldown", ref c.OffGcdMark);
         }
 
         if (ImGui.CollapsingHeader("Text"))
