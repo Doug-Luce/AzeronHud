@@ -282,9 +282,25 @@ The configurator saves on every slider drag, with no lock file, so reads can lan
 retries on `JsonException`. This fires often and must not be noisy. (It bit during development: the profile
 changed under the test harness between two runs because the app was open in the background.)
 
-Profile selection is by mtime ("most recently saved") or an explicit pick in settings. Deliberately **not**
-by decoding `lastUsedSoftwareProfile` out of the app's Chromium IndexedDB LevelDB — it's a compacting
-binary store and the payoff is small. Noted so nobody re-litigates it.
+Profile selection **does** read the app's Chromium IndexedDB LevelDB, reversing an earlier decision here
+that called the payoff small. It wasn't: "most recently saved" shows another game's bindings the moment
+you last edited that game's profile, and the HUD is then confidently, silently wrong about every button.
+The app records the answer itself:
+
+```json
+{"profileId":"75ca7f5e-…","linkedGame":"ffxiv_dx11","linkedType":"process","isFocusSwitching":true}
+```
+
+The chain is: pinned in settings, then the profile linked to FFXIV, then `lastUsedSoftwareProfile`, then
+most recently saved. The reason lands in the status line so a surprising pick is visible.
+
+The store is log-structured, so `AzeronAppState` scans the raw `.log`/`.ldb` files for the JSON the app
+wrote and takes the **last** match rather than truly parsing it. That is a heuristic, so every failure
+— missing directory, mid-write, unreadable — returns "no information" and falls through to the next step.
+It is never an error.
+
+Preferring the *link* over *last used* also means we need not follow live profile switching: the link is
+stable, while last-used moves when the app switches on focus.
 
 ## Deliberately out of scope for v1
 
