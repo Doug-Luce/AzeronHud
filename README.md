@@ -3,6 +3,8 @@
 A [Dalamud](https://github.com/goatcorp/Dalamud) plugin that draws your Azeron keypad on screen, in the
 same layout as the Azeron configurator, with every button labelled by what it does in FFXIV.
 
+![The HUD over the game](images/screenshot-1.png)
+
 ## What it shows
 
 Buttons bound to a hotbar slot get the real thing: the action's icon and name, its cooldown and remaining
@@ -15,6 +17,8 @@ there. Buttons the game can't see at all, like a mouse click or a macro, say so 
 blank. Unassigned buttons fade into the background.
 
 The thumbstick is drawn as a stick, and the knob follows your thumb.
+
+![Cooldowns running, with the stick deflected](images/screenshot-2.png)
 
 ## Setting it up
 
@@ -43,6 +47,8 @@ Everything is adjustable, in `/azeronhud config`:
   or a dark cave.
 - **When it's visible** — a toggle key, hiding during cutscenes, and fading out while you're not in
   combat.
+
+![The appearance settings](images/screenshot-3.png)
 
 If you want the keypad to toggle its own HUD, bind a spare button to one of F13–F24 in the Azeron app and
 set that as the toggle key. FFXIV ignores those keys entirely, so nothing else fires.
