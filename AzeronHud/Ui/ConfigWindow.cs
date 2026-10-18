@@ -510,6 +510,43 @@ internal sealed class ConfigWindow : Window
         ImGui.Separator();
         ImGui.Spacing();
 
+        ImGui.TextUnformatted("Show the HUD");
+        ImGui.SetNextItemWidth(260);
+        if (ImGui.BeginCombo("##showwhen", ShowWhenName(cfg.ShowWhen)))
+        {
+            foreach (var v in new[]
+                     {
+                         CombatVisibility.Always,
+                         CombatVisibility.InCombatOnly,
+                         CombatVisibility.OutOfCombatOnly,
+                     })
+            {
+                if (ImGui.Selectable(ShowWhenName(v), v == cfg.ShowWhen))
+                {
+                    cfg.ShowWhen = v;
+                    cfg.Save();
+                }
+            }
+
+            ImGui.EndCombo();
+        }
+
+        if (cfg.ShowWhen != CombatVisibility.Always)
+        {
+            ImGui.TextDisabled("Leave the HUD toggled on and it will come and go on its own.");
+
+            var linger = cfg.CombatLingerSeconds;
+            ImGui.SetNextItemWidth(260);
+            if (ImGui.SliderFloat("Linger after combat", ref linger, 0f, 15f, "%.0f s"))
+            {
+                cfg.CombatLingerSeconds = linger;
+                cfg.Save();
+            }
+
+            ImGui.TextDisabled("The game drops its combat flag between pulls, so a few seconds\nstops the HUD flickering while you chain packs.");
+        }
+
+        ImGui.Spacing();
         Toggle("Reopen on load if it was open", ref cfg.RememberOpen);
         Toggle("Hide during cutscenes", ref cfg.HideInCutscenes);
         Toggle("Dim when out of combat", ref cfg.DimOutOfCombat);
@@ -589,6 +626,13 @@ internal sealed class ConfigWindow : Window
         if (ImGui.Button("Cancel"))
             pendingReset = null;
     }
+
+    private static string ShowWhenName(CombatVisibility v) => v switch
+    {
+        CombatVisibility.InCombatOnly => "Only in combat",
+        CombatVisibility.OutOfCombatOnly => "Only out of combat",
+        _ => "Always",
+    };
 
     private static string AnchorName(LabelAnchor a) => a switch
     {

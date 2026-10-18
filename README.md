@@ -59,8 +59,9 @@ Everything is adjustable, in `/azeronhud config`:
 - **Compact mode** — show only the buttons bound to an actual ability, and the HUD shrinks to just those.
 - **Colours** — all of them, including a dark outline behind text so it stays readable over a bright wall
   or a dark cave.
-- **When it's visible** — a toggle key, hiding during cutscenes, and fading out while you're not in
-  combat.
+- **When it's visible** — a toggle key, hiding during cutscenes, and showing only in combat (or only
+  out of it), with a few seconds' grace so it doesn't flicker between pulls. It can also just fade
+  rather than disappear.
 
 ![The appearance settings](images/screenshot-3.png)
 

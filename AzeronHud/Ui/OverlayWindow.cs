@@ -45,6 +45,9 @@ internal sealed class OverlayWindow : Window
 
     private bool fitRequested;
 
+    /// <summary>When combat last ended, for the grace period.</summary>
+    private DateTime? leftCombatAt;
+
     internal OverlayWindow(
         Configuration cfg,
         Func<DeviceLayout?> layout,
@@ -103,7 +106,35 @@ internal sealed class OverlayWindow : Window
              || Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent]))
             return false;
 
-        return true;
+        return cfg.ShowWhen switch
+        {
+            CombatVisibility.InCombatOnly => InCombat(),
+            CombatVisibility.OutOfCombatOnly => !InCombat(),
+            _ => true,
+        };
+    }
+
+    /// <summary>
+    /// Whether to treat the player as fighting.
+    ///
+    /// The game's combat flag drops the moment a pack dies, so taking it
+    /// literally makes the HUD flicker off and back on while chaining pulls.
+    /// A short grace period after combat ends smooths that over.
+    /// </summary>
+    private bool InCombat()
+    {
+        if (Plugin.Condition[ConditionFlag.InCombat])
+        {
+            leftCombatAt = null;
+            return true;
+        }
+
+        var linger = TimeSpan.FromSeconds(MathF.Max(0f, cfg.CombatLingerSeconds));
+        if (linger <= TimeSpan.Zero)
+            return false;
+
+        leftCombatAt ??= DateTime.UtcNow;
+        return DateTime.UtcNow - leftCombatAt.Value < linger;
     }
 
     /// <summary>
@@ -179,7 +210,7 @@ internal sealed class OverlayWindow : Window
         };
 
         opacity = cfg.Opacity;
-        if (cfg.DimOutOfCombat && !Plugin.Condition[ConditionFlag.InCombat])
+        if (cfg.DimOutOfCombat && !InCombat())
             opacity *= cfg.OutOfCombatOpacity;
 
         IsClickthrough = cfg.Locked;

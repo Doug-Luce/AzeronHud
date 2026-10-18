@@ -2,6 +2,14 @@ using Dalamud.Configuration;
 
 namespace AzeronHud;
 
+/// <summary>When the HUD shows itself, relative to combat.</summary>
+public enum CombatVisibility
+{
+    Always = 0,
+    InCombatOnly = 1,
+    OutOfCombatOnly = 2,
+}
+
 /// <summary>Where a label sits within its cell.</summary>
 public enum LabelAnchor
 {
@@ -175,6 +183,16 @@ public sealed class Configuration : IPluginConfiguration
     public bool WasOpen;
 
     public bool HideInCutscenes = true;
+
+    /// <summary>When the HUD is allowed on screen at all.</summary>
+    public CombatVisibility ShowWhen = CombatVisibility.Always;
+
+    /// <summary>
+    /// Keep showing for this long after combat ends. The game's combat flag
+    /// drops between pulls, and without a grace period the HUD flickers off
+    /// and straight back on as you chain packs.
+    /// </summary>
+    public float CombatLingerSeconds = 3f;
 
     /// <summary>Fade the HUD down when you're not fighting.</summary>
     public bool DimOutOfCombat;
