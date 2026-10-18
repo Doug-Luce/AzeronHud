@@ -3,7 +3,7 @@
     "Name": "Azeron HUD",
     "InternalName": "AzeronHud",
     "Author": "aurelius",
-    "AssemblyVersion": "1.1.0.0",
+    "AssemblyVersion": "1.1.1.0",
     "DalamudApiLevel": 15,
     "ApplicableVersion": "any",
     "Punchline": "Your Azeron keypad on screen, labelled with what each button actually does.",

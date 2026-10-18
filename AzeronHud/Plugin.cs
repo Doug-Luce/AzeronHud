@@ -387,7 +387,7 @@ public sealed class Plugin : IDalamudPlugin
         }
     }
 
-    private void ToggleOverlay() => overlay.IsOpen = !overlay.IsOpen;
+    private void ToggleOverlay() => overlay.ToggleManually();
 
     private void ToggleConfig() => configWindow.IsOpen = !configWindow.IsOpen;
 

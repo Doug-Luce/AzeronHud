@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <AssemblyName>AzeronHud</AssemblyName>
-    <Version>1.1.0.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.1.1.0</Version>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <FileVersion>1.1.1.0</FileVersion>
     <Description>Draws your Azeron keypad over FFXIV, labelled with what each button does.</Description>
     <Authors>aurelius</Authors>
     <PackageProjectUrl>https://github.com/Doug-Luce/AzeronHud</PackageProjectUrl>

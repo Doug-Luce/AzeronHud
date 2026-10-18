@@ -533,7 +533,7 @@ internal sealed class ConfigWindow : Window
 
         if (cfg.ShowWhen != CombatVisibility.Always)
         {
-            ImGui.TextDisabled("Leave the HUD toggled on and it will come and go on its own.");
+            ImGui.TextDisabled("Leave the HUD toggled on and it will come and go on its own.\nThe toggle still works whenever you want a look — the rule takes\nover again next time you enter or leave combat.");
 
             var linger = cfg.CombatLingerSeconds;
             ImGui.SetNextItemWidth(260);

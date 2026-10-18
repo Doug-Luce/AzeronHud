@@ -48,6 +48,15 @@ internal sealed class OverlayWindow : Window
     /// <summary>When combat last ended, for the grace period.</summary>
     private DateTime? leftCombatAt;
 
+    /// <summary>
+    /// A deliberate show or hide that outranks the combat rule, until combat
+    /// state next changes. Null means "just follow the rule".
+    /// </summary>
+    private bool? manualOverride;
+
+    /// <summary>Combat state as of the last frame, for spotting transitions.</summary>
+    private bool wasInCombat;
+
     internal OverlayWindow(
         Configuration cfg,
         Func<DeviceLayout?> layout,
@@ -106,12 +115,50 @@ internal sealed class OverlayWindow : Window
              || Plugin.Condition[ConditionFlag.OccupiedInCutSceneEvent]))
             return false;
 
+        var combat = InCombat();
+        if (combat != wasInCombat)
+        {
+            // Combat changed, so the rule takes back over from whatever the
+            // user asked for a moment ago.
+            wasInCombat = combat;
+            manualOverride = null;
+        }
+
+        if (manualOverride is { } forced)
+            return forced;
+
         return cfg.ShowWhen switch
         {
-            CombatVisibility.InCombatOnly => InCombat(),
-            CombatVisibility.OutOfCombatOnly => !InCombat(),
+            CombatVisibility.InCombatOnly => combat,
+            CombatVisibility.OutOfCombatOnly => !combat,
             _ => true,
         };
+    }
+
+    /// <summary>
+    /// What the toggle command and hotkey do.
+    ///
+    /// With a combat rule in play, flipping IsOpen alone looks broken: the rule
+    /// immediately hides the window again, so the key appears to do nothing.
+    /// Here an explicit toggle wins, and hands control back to the rule the
+    /// next time you enter or leave combat.
+    /// </summary>
+    internal void ToggleManually()
+    {
+        if (cfg.ShowWhen == CombatVisibility.Always)
+        {
+            IsOpen = !IsOpen;
+            return;
+        }
+
+        if (IsOpen && DrawConditions())
+        {
+            manualOverride = false;
+            return;
+        }
+
+        IsOpen = true;
+        manualOverride = true;
     }
 
     /// <summary>
